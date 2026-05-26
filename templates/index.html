@@ -54,9 +54,10 @@ body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,san
 
 /* ── City Map ────────────────────────────────────────────────────── */
 #city{
-  padding-top:56px;min-height:100vh;
-  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  padding:72px 0 2rem;
+  display:flex;flex-direction:column;align-items:center;
   position:relative;overflow:hidden;
+  background:var(--bg);
 }
 /* Grid background */
 #city::before{
@@ -230,7 +231,7 @@ body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,san
   background:var(--sidewalk);
   border-top:2px solid #1e3248;
   padding:.5rem 1.2rem;
-  width:100%;display:flex;justify-content:center;align-items:center;
+  width:100%;display:flex;justify-content:space-between;align-items:center;
   gap:.4rem;font-size:.65rem;color:var(--muted);
 }
 .enter-hint{
@@ -241,6 +242,115 @@ body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,san
 .hint-oasis{background:rgba(0,229,160,.1);color:var(--oasis);border:1px solid rgba(0,229,160,.2)}
 .hint-dali{background:rgba(255,107,53,.1);color:var(--dali);border:1px solid rgba(255,107,53,.2)}
 .building:hover .enter-hint{transform:scale(1.05)}
+
+/* Shortage badge on sidewalk */
+.sh-badge{
+  font-size:.58rem;font-weight:700;padding:.15rem .5rem;
+  border-radius:999px;letter-spacing:.04em;white-space:nowrap;
+}
+.sh-ok  {background:rgba(34,197,94,.12);color:var(--green);border:1px solid rgba(34,197,94,.2)}
+.sh-warn{background:rgba(245,158,11,.13);color:var(--warn);border:1px solid rgba(245,158,11,.22)}
+.sh-crit{background:rgba(239,68,68,.13);color:var(--danger);border:1px solid rgba(239,68,68,.22)}
+
+/* ── Intel Strip ─────────────────────────────────────────────────── */
+#intel-strip{
+  width:min(980px,97vw);margin:0 auto;
+  display:grid;grid-template-columns:1fr 220px 1fr;
+  gap:1rem;padding:.25rem 0 2.5rem;
+  position:relative;z-index:1;
+}
+@media(max-width:720px){
+  #intel-strip{grid-template-columns:1fr;gap:.75rem;}
+  .intel-divider{display:none}
+}
+.intel-panel{
+  background:var(--card);border:1px solid var(--border);border-radius:12px;
+  padding:1rem 1.1rem;
+}
+.intel-panel-oasis{border-top:3px solid var(--oasis-dim)}
+.intel-panel-dali {border-top:3px solid var(--dali-dim)}
+.intel-head{
+  display:flex;align-items:center;justify-content:space-between;
+  margin-bottom:.8rem;
+}
+.intel-rest-label{font-size:.88rem;font-weight:800;letter-spacing:.04em}
+.intel-rest-o{color:var(--oasis)}
+.intel-rest-d{color:var(--dali)}
+.intel-section-sub{font-size:.58rem;text-transform:uppercase;letter-spacing:.1em;color:var(--muted)}
+.intel-cnt-badge{
+  font-size:.62rem;font-weight:700;padding:.15rem .5rem;border-radius:999px;
+}
+.intel-cnt-ok  {background:rgba(34,197,94,.12);color:var(--green)}
+.intel-cnt-warn{background:rgba(245,158,11,.13);color:var(--warn)}
+.intel-cnt-crit{background:rgba(239,68,68,.13);color:var(--danger)}
+
+.intel-items{display:flex;flex-direction:column;gap:.32rem}
+.intel-row{
+  display:flex;align-items:center;gap:.5rem;
+  padding:.32rem .55rem;border-radius:6px;font-size:.8rem;
+}
+.intel-row-pending{
+  background:rgba(245,158,11,.06);border:1px solid rgba(245,158,11,.13);
+}
+.intel-row-urgent{
+  background:rgba(239,68,68,.07);border:1px solid rgba(239,68,68,.15);
+  color:var(--danger);
+}
+.intel-row-bought{
+  background:rgba(34,197,94,.04);border:1px solid rgba(34,197,94,.1);
+  opacity:.55;text-decoration:line-through;
+}
+.intel-row-name{flex:1;font-weight:500}
+.intel-row-qty{font-size:.7rem;color:var(--muted);white-space:nowrap}
+.intel-row-urgent .intel-row-qty{color:var(--danger)}
+.intel-ok-msg{
+  color:var(--green);font-size:.82rem;padding:.4rem 0;
+  display:flex;align-items:center;gap:.4rem;
+}
+
+/* Intel divider / cross-analysis */
+.intel-divider{
+  display:flex;flex-direction:column;align-items:center;
+  justify-content:flex-start;padding-top:.8rem;gap:.6rem;
+}
+.intel-div-icon{font-size:1.2rem;color:var(--muted);margin:.4rem 0}
+.intel-cross-card{
+  width:100%;padding:.55rem .7rem;border-radius:9px;
+  font-size:.73rem;text-align:center;
+  display:flex;flex-direction:column;gap:.2rem;
+}
+.intel-cross-both{
+  background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.2);
+  color:var(--danger);
+}
+.intel-cross-oasis{
+  background:rgba(0,229,160,.07);border:1px solid rgba(0,229,160,.18);
+  color:var(--oasis);
+}
+.intel-cross-dali{
+  background:rgba(255,107,53,.07);border:1px solid rgba(255,107,53,.18);
+  color:var(--dali);
+}
+.intel-cross-ok{
+  background:rgba(34,197,94,.07);border:1px solid rgba(34,197,94,.15);
+  color:var(--green);
+}
+.intel-cross-title{font-weight:700;font-size:.65rem;letter-spacing:.04em;text-transform:uppercase}
+
+/* Urgency badge in detail panel */
+.urgency-pill{
+  font-size:.6rem;font-weight:700;padding:.1rem .42rem;
+  border-radius:999px;vertical-align:middle;margin-left:.3rem;
+  background:rgba(239,68,68,.15);color:var(--danger);
+}
+
+/* CAJA HUD live counter */
+.caja-live-cnt{
+  font-size:.65rem;font-weight:600;padding:.18rem .55rem;
+  border-radius:5px;white-space:nowrap;display:none;
+}
+.caja-live-ok  {background:rgba(34,197,94,.12);color:var(--green)}
+.caja-live-warn{background:rgba(245,158,11,.14);color:var(--warn)}
 
 /* ── Restaurant Detail Panel ─────────────────────────────────────── */
 #detail-panel{
@@ -599,8 +709,9 @@ body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,san
   <div class="hud-right">
     <div class="live-dot"></div>
     <span class="hud-ts" id="ts-bar">Actualizado: {{ now }}</span>
+    <span id="caja-live-cnt" class="caja-live-cnt"></span>
     <button class="btn-caja" onclick="openCaja()">💳 Caja</button>
-    <button class="btn-compare" onclick="openCompare()">⚖ Comparar Almacenes</button>
+    <button class="btn-compare" onclick="openCompare()">⚖ Almacenes</button>
   </div>
 </div>
 
@@ -645,6 +756,7 @@ body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,san
       </div>
       <div class="sidewalk">
         <span class="enter-hint hint-oasis">↵ Entrar</span>
+        <span id="sh-badge-oasis" class="sh-badge sh-ok">✅ Stock OK</span>
       </div>
     </div>
 
@@ -688,11 +800,53 @@ body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,san
       </div>
       <div class="sidewalk">
         <span class="enter-hint hint-dali">↵ Entrar</span>
+        <span id="sh-badge-dali" class="sh-badge sh-ok">✅ Stock OK</span>
       </div>
     </div>
 
   </div><!-- city-scene -->
 </div><!-- city -->
+
+<!-- ── Intel Strip — Almacén en tiempo real ──────────────────── -->
+<div id="intel-strip">
+
+  <!-- Oasis -->
+  <div class="intel-panel intel-panel-oasis">
+    <div class="intel-head">
+      <div>
+        <div class="intel-rest-label intel-rest-o">🌴 Oasis</div>
+        <div class="intel-section-sub">Almacén · faltantes del día</div>
+      </div>
+      <span id="intel-cnt-oasis" class="intel-cnt-badge intel-cnt-ok">0 faltantes</span>
+    </div>
+    <div id="intel-items-oasis" class="intel-items">
+      <div style="color:var(--muted);font-size:.78rem">Cargando…</div>
+    </div>
+  </div>
+
+  <!-- Análisis cruzado -->
+  <div class="intel-divider">
+    <div class="intel-div-icon">⇄</div>
+    <div id="intel-cross" style="display:flex;flex-direction:column;gap:.5rem;width:100%">
+      <div style="color:var(--muted);font-size:.7rem;text-align:center">Analizando…</div>
+    </div>
+  </div>
+
+  <!-- Dali -->
+  <div class="intel-panel intel-panel-dali">
+    <div class="intel-head">
+      <div>
+        <div class="intel-rest-label intel-rest-d">🎨 Dali</div>
+        <div class="intel-section-sub">Almacén · faltantes del día</div>
+      </div>
+      <span id="intel-cnt-dali" class="intel-cnt-badge intel-cnt-ok">0 faltantes</span>
+    </div>
+    <div id="intel-items-dali" class="intel-items">
+      <div style="color:var(--muted);font-size:.78rem">Cargando…</div>
+    </div>
+  </div>
+
+</div><!-- intel-strip -->
 
 <!-- ── Detail Panel ───────────────────────────────────────────── -->
 <div id="detail-panel">
@@ -1017,13 +1171,28 @@ function fillDetail(r, name){
   if(!r.shortages||r.shortages.length===0){
     inv.innerHTML='<div style="color:var(--green);font-size:.82rem;padding:.5rem 0">✅ Sin faltantes pendientes.</div>';
   }else{
-    inv.innerHTML=r.shortages.map(s=>{
-      const bought=s.status==='bought';
-      return`<div class="inv-item${bought?' inv-bought':''}">
-        <span class="inv-icon">${bought?'':'🛒'}</span>
+    // Items que también faltan en el otro restaurante → marcar urgentes
+    const otherName=name==='oasis'?'dali':'oasis';
+    const otherPending=new Set(
+      (STATE[otherName]?.shortages||[])
+        .filter(s=>s.status==='pending')
+        .map(s=>s.item_name.toLowerCase())
+    );
+    const pending=r.shortages.filter(s=>s.status==='pending');
+    const bought =r.shortages.filter(s=>s.status!=='pending');
+    const pendingTxt=pending.length?`<span style="color:var(--warn);font-size:.68rem">${pending.length} pendiente${pending.length>1?'s':''}</span>`:'';
+    const boughtTxt =bought.length ?`<span style="color:var(--green);font-size:.68rem;margin-left:.5rem">${bought.length} comprado${bought.length>1?'s':''}</span>`:'';
+    inv.innerHTML=`<div style="margin-bottom:.6rem">${pendingTxt}${boughtTxt}</div>`+
+    r.shortages.map(s=>{
+      const isBought=s.status==='bought';
+      const isUrgent=!isBought&&otherPending.has(s.item_name.toLowerCase());
+      const rowCls=isBought?'inv-bought':'';
+      const pill=isUrgent?`<span class="urgency-pill">🔴 Ambos</span>`:'';
+      return`<div class="inv-item${rowCls?' '+rowCls:''}">
+        <span class="inv-icon">${isBought?'✅':'🛒'}</span>
         <div style="flex:1">
-          <div class="inv-name">${s.item_name}</div>
-          <div class="inv-meta by">${s.updated_by||'—'} · <span class="meta-when">${fmtTime(s.updated_at)}</span></div>
+          <div class="inv-name">${s.item_name}${pill}</div>
+          <div class="inv-meta"><span class="by">${s.updated_by||'—'}</span> · <span class="meta-when">${fmtTime(s.updated_at)}</span></div>
         </div>
         <span class="inv-qty">${s.quantity_needed}</span>
       </div>`;
@@ -1152,7 +1321,8 @@ function renderCompare(){
               : `Ambos tienen el mismo número de faltantes (${oPending})`
         }
       </div>
-    </div>`;
+    </div>
+    ${_cmpTransferAnalysis(o.shortages, d.shortages)}`;
 }
 
 function renderCmpItems(items){
@@ -1180,6 +1350,186 @@ function latestShortageTime(items){
   return{time:latest||'—',by};
 }
 
+function _cmpTransferAnalysis(oShortages, dShortages){
+  const oSet=new Set((oShortages||[]).filter(s=>s.status==='pending').map(s=>s.item_name.toLowerCase()));
+  const dSet=new Set((dShortages||[]).filter(s=>s.status==='pending').map(s=>s.item_name.toLowerCase()));
+  if(!oSet.size&&!dSet.size) return '';
+
+  const both   =[...oSet].filter(x=>dSet.has(x));
+  const onlyO  =[...oSet].filter(x=>!dSet.has(x));
+  const onlyD  =[...dSet].filter(x=>!oSet.has(x));
+
+  let rows='';
+  if(both.length){
+    rows+=`<tr>
+      <td style="padding:.4rem .6rem;vertical-align:top">
+        <span style="background:rgba(239,68,68,.12);color:var(--danger);font-size:.65rem;font-weight:700;padding:.15rem .45rem;border-radius:4px">🔴 Ambos necesitan</span>
+      </td>
+      <td style="padding:.4rem .6rem;font-size:.8rem;color:var(--danger)">
+        ${both.map(x=>`<strong>${x}</strong>`).join(', ')}
+      </td>
+      <td style="padding:.4rem .6rem;font-size:.75rem;color:var(--muted)">Comprar para ambos urgente</td>
+    </tr>`;
+  }
+  if(onlyO.length){
+    rows+=`<tr>
+      <td style="padding:.4rem .6rem;vertical-align:top">
+        <span style="background:rgba(0,229,160,.1);color:var(--oasis);font-size:.65rem;font-weight:700;padding:.15rem .45rem;border-radius:4px">💡 Solo Oasis</span>
+      </td>
+      <td style="padding:.4rem .6rem;font-size:.8rem;color:var(--oasis)">
+        ${onlyO.map(x=>`<strong>${x}</strong>`).join(', ')}
+      </td>
+      <td style="padding:.4rem .6rem;font-size:.75rem;color:var(--muted)">Dali podría enviar si tiene stock</td>
+    </tr>`;
+  }
+  if(onlyD.length){
+    rows+=`<tr>
+      <td style="padding:.4rem .6rem;vertical-align:top">
+        <span style="background:rgba(255,107,53,.1);color:var(--dali);font-size:.65rem;font-weight:700;padding:.15rem .45rem;border-radius:4px">💡 Solo Dali</span>
+      </td>
+      <td style="padding:.4rem .6rem;font-size:.8rem;color:var(--dali)">
+        ${onlyD.map(x=>`<strong>${x}</strong>`).join(', ')}
+      </td>
+      <td style="padding:.4rem .6rem;font-size:.75rem;color:var(--muted)">Oasis podría enviar si tiene stock</td>
+    </tr>`;
+  }
+  if(!rows) return '';
+
+  return`<div class="cmp-col" style="grid-column:1/-1;background:var(--card2);border-radius:12px;overflow:hidden">
+    <div style="padding:.65rem 1rem;font-size:.65rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);border-bottom:1px solid var(--border)">
+      🔄 Análisis de traspaso — decisiones rápidas
+    </div>
+    <div style="padding:.5rem">
+      <table style="width:100%;border-collapse:collapse">${rows}</table>
+    </div>
+  </div>`;
+}
+
+// ── Intel Strip — Almacén en tiempo real ────────────────────────────
+function updateIntelStrip(){
+  _renderIntelPanel('oasis', STATE.oasis.shortages||[]);
+  _renderIntelPanel('dali',  STATE.dali.shortages||[]);
+  _renderCrossAnalysis();
+  _updateShBadges();
+}
+
+function _renderIntelPanel(rname, shortages){
+  const pending=shortages.filter(s=>s.status==='pending');
+  const bought =shortages.filter(s=>s.status!=='pending');
+  const otherName=rname==='oasis'?'dali':'oasis';
+  const otherPending=new Set(
+    (STATE[otherName]?.shortages||[])
+      .filter(s=>s.status==='pending')
+      .map(s=>s.item_name.toLowerCase())
+  );
+
+  // Count badge
+  const cntEl=document.getElementById('intel-cnt-'+rname);
+  if(pending.length===0){
+    cntEl.className='intel-cnt-badge intel-cnt-ok';
+    cntEl.textContent='✅ Sin faltantes';
+  } else if(pending.length<=2){
+    cntEl.className='intel-cnt-badge intel-cnt-warn';
+    cntEl.textContent=`⚠️ ${pending.length} faltante${pending.length>1?'s':''}`;
+  } else {
+    cntEl.className='intel-cnt-badge intel-cnt-crit';
+    cntEl.textContent=`🔴 ${pending.length} faltantes`;
+  }
+
+  const el=document.getElementById('intel-items-'+rname);
+  if(shortages.length===0){
+    el.innerHTML='<div class="intel-ok">✅ Almacén completo — sin faltantes registrados</div>';
+    return;
+  }
+
+  let html='';
+  for(const s of [...pending,...bought]){
+    const isBought=s.status!=='pending';
+    const isUrgent=!isBought&&otherPending.has(s.item_name.toLowerCase());
+    const cls=isBought?'intel-row-bought':isUrgent?'intel-row-urgent':'intel-row-pending';
+    const icon=isBought?'✅':isUrgent?'🔴':'🛒';
+    const urgentTag=isUrgent?`<span style="font-size:.6rem;font-weight:700;color:var(--danger);margin-left:.3rem">ambos</span>`:'';
+    html+=`<div class="intel-row ${cls}">
+      <span>${icon}</span>
+      <span class="intel-row-name">${s.item_name}${urgentTag}</span>
+      <span class="intel-row-qty">${s.quantity_needed}</span>
+    </div>`;
+  }
+  el.innerHTML=html;
+}
+
+function _renderCrossAnalysis(){
+  const oP=new Set((STATE.oasis.shortages||[]).filter(s=>s.status==='pending').map(s=>s.item_name.toLowerCase()));
+  const dP=new Set((STATE.dali.shortages||[]).filter(s=>s.status==='pending').map(s=>s.item_name.toLowerCase()));
+  const el=document.getElementById('intel-cross');
+  let html='';
+
+  const both=[...oP].filter(x=>dP.has(x));
+  const onlyO=[...oP].filter(x=>!dP.has(x));
+  const onlyD=[...dP].filter(x=>!oP.has(x));
+
+  if(both.length){
+    html+=`<div class="intel-cross-card intel-cross-both">
+      <div class="intel-cross-title">🔴 Ambos necesitan</div>
+      <div>${both.map(x=>`<strong>${x}</strong>`).join(', ')}</div>
+      <div style="font-size:.62rem;margin-top:.15rem;opacity:.8">Comprar para los dos — urgente</div>
+    </div>`;
+  }
+  if(onlyO.length){
+    html+=`<div class="intel-cross-card intel-cross-oasis">
+      <div class="intel-cross-title">💡 Solo Oasis necesita</div>
+      <div>${onlyO.slice(0,3).map(x=>`<strong>${x}</strong>`).join(', ')}</div>
+      <div style="font-size:.62rem;margin-top:.15rem;opacity:.8">Dali podría enviar si tiene stock</div>
+    </div>`;
+  }
+  if(onlyD.length){
+    html+=`<div class="intel-cross-card intel-cross-dali">
+      <div class="intel-cross-title">💡 Solo Dali necesita</div>
+      <div>${onlyD.slice(0,3).map(x=>`<strong>${x}</strong>`).join(', ')}</div>
+      <div style="font-size:.62rem;margin-top:.15rem;opacity:.8">Oasis podría enviar si tiene stock</div>
+    </div>`;
+  }
+  if(!html){
+    html=`<div class="intel-cross-card intel-cross-ok">
+      <div class="intel-cross-title">✅ Sin diferencias</div>
+      <div style="font-size:.72rem">Ambos restaurantes con estado de almacén similar</div>
+    </div>`;
+  }
+  el.innerHTML=html;
+}
+
+function _updateShBadges(){
+  for(const rname of ['oasis','dali']){
+    const pending=(STATE[rname].shortages||[]).filter(s=>s.status==='pending').length;
+    const el=document.getElementById('sh-badge-'+rname);
+    if(!el)continue;
+    if(pending===0){
+      el.className='sh-badge sh-ok';el.textContent='✅ Stock OK';
+    }else if(pending<=3){
+      el.className='sh-badge sh-warn';el.textContent=`⚠️ ${pending} faltante${pending>1?'s':''}`;
+    }else{
+      el.className='sh-badge sh-crit';el.textContent=`🔴 ${pending} faltantes`;
+    }
+  }
+}
+
+function _updateCajaHudCnt(){
+  const all=[...(cajaData.oasis||[]),...(cajaData.dali||[])];
+  const el=document.getElementById('caja-live-cnt');
+  if(!el||!all.length){if(el)el.style.display='none';return;}
+  const verified=all.filter(p=>p.verification_status==='verified').length;
+  const issues  =all.filter(p=>['wrong_account','unreadable'].includes(p.verification_status)).length;
+  const total   =all.reduce((s,p)=>s+(p.amount||0),0);
+  el.style.display='inline-block';
+  if(issues>0){
+    el.className='caja-live-cnt caja-live-warn';
+    el.textContent=`⚠️ ${issues} revisar · Bs ${total.toFixed(0)}`;
+  }else{
+    el.className='caja-live-cnt caja-live-ok';
+    el.textContent=`💳 ${verified}✅ · Bs ${total.toFixed(0)}`;
+  }
+}
+
 // ── Auto-refresh ─────────────────────────────────────────────────────
 async function refresh(){
   try{
@@ -1189,6 +1539,7 @@ async function refresh(){
 
     updateCityBuilding('oasis',data.oasis);
     updateCityBuilding('dali',data.dali);
+    updateIntelStrip();
 
     if(currentRest){
       fillDetail(STATE[currentRest],currentRest);
@@ -1404,7 +1755,28 @@ function closeLightbox(){
 // Init
 updateCityBuilding('oasis', STATE.oasis);
 updateCityBuilding('dali',  STATE.dali);
+updateIntelStrip();
+
+// Cargar datos de caja en background para el contador HUD
+(async()=>{
+  try{
+    const resp=await fetch('/api/payments');
+    cajaData=await resp.json();
+    _updateCajaHudCnt();
+  }catch(e){}
+})();
+
 setInterval(refresh, 15000);
+
+// Refrescar contador CAJA cada 30s independientemente
+setInterval(async()=>{
+  try{
+    const resp=await fetch('/api/payments');
+    cajaData=await resp.json();
+    _updateCajaHudCnt();
+    if(cajaCurrentShift!==null) renderCaja();
+  }catch(e){}
+}, 30000);
 </script>
 </body>
 </html>
