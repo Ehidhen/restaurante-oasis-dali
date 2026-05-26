@@ -52,3 +52,38 @@ def all_ids_for_restaurant(restaurant_name: str) -> set[str]:
 
 
 ALERT_LOW_THRESHOLD = 5
+
+# ── Cuentas QR / bancarias de cada restaurante ──────────────────────────────
+# Números contra los que se verifica el comprobante (sin espacios ni guiones)
+
+def _norm_account(raw: str) -> str:
+    """Normaliza un número de cuenta: solo dígitos y letras."""
+    return "".join(c for c in raw if c.isalnum()).lower()
+
+
+OASIS_ACCOUNT_RAW = os.getenv("OASIS_ACCOUNT_NUMBER", "")
+DALI_ACCOUNT_RAW  = os.getenv("DALI_ACCOUNT_NUMBER", "")
+
+OASIS_ACCOUNT = _norm_account(OASIS_ACCOUNT_RAW)
+DALI_ACCOUNT  = _norm_account(DALI_ACCOUNT_RAW)
+
+
+def get_restaurant_account(restaurant_name: str) -> str:
+    """Returns the normalised account number for a restaurant."""
+    return OASIS_ACCOUNT if restaurant_name == "oasis" else DALI_ACCOUNT
+
+
+def verify_account(extracted: str, restaurant_name: str) -> str:
+    """
+    Returns 'verified', 'wrong_account', or 'unreadable'.
+    Uses substring matching to handle partial reads.
+    """
+    if not extracted:
+        return "unreadable"
+    norm = _norm_account(extracted)
+    expected = get_restaurant_account(restaurant_name)
+    if not expected:
+        return "pending"   # not configured yet
+    if expected in norm or norm in expected:
+        return "verified"
+    return "wrong_account"

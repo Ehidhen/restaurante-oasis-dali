@@ -128,20 +128,37 @@ def init_db():
         );
 
         CREATE TABLE IF NOT EXISTS payments (
-            id            INTEGER PRIMARY KEY AUTOINCREMENT,
-            restaurant_id INTEGER NOT NULL REFERENCES restaurants(id),
-            cashier_name  TEXT NOT NULL,
-            amount        REAL DEFAULT 0,
-            description   TEXT DEFAULT '',
-            file_id       TEXT NOT NULL,
-            file_path     TEXT DEFAULT '',
-            registered_at TEXT DEFAULT (datetime('now','localtime'))
+            id                  INTEGER PRIMARY KEY AUTOINCREMENT,
+            restaurant_id       INTEGER NOT NULL REFERENCES restaurants(id),
+            cashier_name        TEXT NOT NULL,
+            amount              REAL DEFAULT 0,
+            description         TEXT DEFAULT '',
+            file_id             TEXT NOT NULL,
+            file_path           TEXT DEFAULT '',
+            shift               TEXT DEFAULT '',
+            extracted_account   TEXT DEFAULT '',
+            extracted_amount    REAL DEFAULT 0,
+            verification_status TEXT DEFAULT 'pending',
+            verification_note   TEXT DEFAULT '',
+            registered_at       TEXT DEFAULT (datetime('now','localtime'))
         );
     """)
 
     # Seed restaurantes
     c.execute("INSERT OR IGNORE INTO restaurants (name) VALUES ('oasis')")
     c.execute("INSERT OR IGNORE INTO restaurants (name) VALUES ('dali')")
+
+    # Migrate payments table — add new columns if upgrading from older schema
+    _existing = {row[1] for row in c.execute("PRAGMA table_info(payments)").fetchall()}
+    for col, defn in [
+        ("shift",               "TEXT DEFAULT ''"),
+        ("extracted_account",   "TEXT DEFAULT ''"),
+        ("extracted_amount",    "REAL DEFAULT 0"),
+        ("verification_status", "TEXT DEFAULT 'pending'"),
+        ("verification_note",   "TEXT DEFAULT ''"),
+    ]:
+        if col not in _existing:
+            c.execute(f"ALTER TABLE payments ADD COLUMN {col} {defn}")
 
     conn.commit()
     conn.close()
@@ -569,30 +586,67 @@ def update_menu_dishes(restaurant_id: int, soup: str, main_dish: str,
 # ── Comprobantes de pago ─────────────────────────────────────────────────────
 
 def add_payment(restaurant_id: int, cashier_name: str, amount: float,
-                description: str, file_id: str, file_path: str = "") -> int:
+                description: str, file_id: str, file_path: str = "",
+                shift: str = "", verification_status: str = "pending",
+                extracted_account: str = "", extracted_amount: float = 0,
+                verification_note: str = "") -> int:
     with get_conn() as conn:
         cur = conn.execute("""
-            INSERT INTO payments (restaurant_id, cashier_name, amount, description, file_id, file_path)
-            VALUES (?, ?, ?, ?, ?, ?)
-        """, (restaurant_id, cashier_name, amount, description, file_id, file_path))
+            INSERT INTO payments
+                (restaurant_id, cashier_name, amount, description, file_id, file_path,
+                 shift, verification_status, extracted_account, extracted_amount, verification_note)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """, (restaurant_id, cashier_name, amount, description, file_id, file_path,
+              shift, verification_status, extracted_account, extracted_amount, verification_note))
         conn.commit()
         return cur.lastrowid
+
+
+def update_payment_verification(payment_id: int, status: str,
+                                 extracted_account: str = "",
+                                 extracted_amount: float = 0,
+                                 note: str = ""):
+    with get_conn() as conn:
+        conn.execute("""
+            UPDATE payments SET verification_status=?, extracted_account=?,
+                extracted_amount=?, verification_note=?
+            WHERE id=?
+        """, (status, extracted_account, extracted_amount, note, payment_id))
+        conn.commit()
 
 
 def get_payments(restaurant_id: int, limit: int = 100) -> list:
     with get_conn() as conn:
         return conn.execute("""
-            SELECT id, cashier_name, amount, description, file_id, file_path, registered_at
+            SELECT id, cashier_name, amount, description, file_id, file_path,
+                   shift, verification_status, extracted_account, extracted_amount,
+                   verification_note, registered_at
             FROM payments WHERE restaurant_id = ?
             ORDER BY registered_at DESC LIMIT ?
         """, (restaurant_id, limit)).fetchall()
+
+
+def get_payments_by_shift(restaurant_id: int, shift: str,
+                           date: str | None = None) -> list:
+    d = date or today()
+    with get_conn() as conn:
+        return conn.execute("""
+            SELECT id, cashier_name, amount, description, file_id, file_path,
+                   shift, verification_status, extracted_account, extracted_amount,
+                   verification_note, registered_at
+            FROM payments
+            WHERE restaurant_id=? AND shift=? AND date(registered_at)=?
+            ORDER BY registered_at DESC
+        """, (restaurant_id, shift, d)).fetchall()
 
 
 def get_all_payments(limit: int = 200) -> list:
     with get_conn() as conn:
         return conn.execute("""
             SELECT p.id, r.name as restaurant_name, p.cashier_name, p.amount,
-                   p.description, p.file_id, p.file_path, p.registered_at
+                   p.description, p.file_id, p.file_path, p.shift,
+                   p.verification_status, p.extracted_account, p.extracted_amount,
+                   p.verification_note, p.registered_at
             FROM payments p JOIN restaurants r ON r.id = p.restaurant_id
             ORDER BY p.registered_at DESC LIMIT ?
         """, (limit,)).fetchall()

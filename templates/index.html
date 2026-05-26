@@ -498,6 +498,27 @@ body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,san
 .caja-rest-o{background:rgba(0,229,160,.12);color:var(--oasis)}
 .caja-rest-d{background:rgba(255,107,53,.12);color:var(--dali)}
 .caja-empty{text-align:center;color:var(--muted);font-size:.85rem;padding:3rem 0}
+.caja-shift-section{margin-bottom:1.75rem}
+.caja-shift-header{
+  display:flex;align-items:flex-start;justify-content:space-between;gap:1rem;
+  background:var(--card2);border:1px solid var(--border);border-radius:10px;
+  padding:.85rem 1rem;margin-bottom:.85rem;flex-wrap:wrap;
+}
+.caja-shift-title{font-size:.95rem;font-weight:700;color:var(--white);margin-bottom:.35rem}
+.caja-shift-stats{font-size:.78rem;color:var(--muted);display:flex;gap:.75rem;flex-wrap:wrap}
+.caja-shift-badge{
+  font-size:.72rem;font-weight:600;padding:.3rem .75rem;border-radius:6px;white-space:nowrap;
+}
+.caja-ok {background:rgba(34,197,94,.12);color:var(--green);border:1px solid rgba(34,197,94,.25)}
+.caja-nok{background:rgba(245,158,11,.12);color:var(--warn);border:1px solid rgba(245,158,11,.25)}
+.caja-grid-inner{
+  display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:.85rem;
+}
+.caja-vbadge{
+  font-size:.7rem;font-weight:600;padding:.25rem .6rem;
+  border-radius:5px 5px 0 0;border-bottom:1px solid;text-align:center;
+}
+.caja-card-account{font-size:.72rem;color:var(--blue);margin-top:.15rem;word-break:break-all}
 #caja-lightbox{
   display:none;position:fixed;inset:0;z-index:300;
   background:rgba(0,0,0,.92);align-items:center;justify-content:center;
@@ -1083,6 +1104,10 @@ async function refresh(){
 let cajaFilter='all';
 let cajaData={oasis:[],dali:[]};
 
+const V_ICON={verified:'✅',wrong_account:'⚠️',unreadable:'❓',pending:'⏳'};
+const V_LABEL={verified:'Verificado',wrong_account:'Cuenta incorrecta',unreadable:'Ilegible',pending:'Pendiente'};
+const V_COLOR={verified:'#22c55e',wrong_account:'#f59e0b',unreadable:'#6b7280',pending:'#3b82f6'};
+
 async function openCaja(){
   document.getElementById('caja-panel').style.display='block';
   await loadCajaData();
@@ -1090,7 +1115,6 @@ async function openCaja(){
 function closeCaja(){
   document.getElementById('caja-panel').style.display='none';
 }
-
 function setCajaFilter(f){
   cajaFilter=f;
   ['all','oasis','dali'].forEach(k=>{
@@ -1098,7 +1122,6 @@ function setCajaFilter(f){
   });
   renderCaja();
 }
-
 async function loadCajaData(){
   try{
     const resp=await fetch('/api/payments');
@@ -1107,49 +1130,111 @@ async function loadCajaData(){
   renderCaja();
 }
 
-function renderCaja(){
-  let payments=[];
+function _getPayments(){
   if(cajaFilter==='all'){
-    payments=[
+    return[
       ...(cajaData.oasis||[]).map(p=>({...p,rest:'oasis'})),
       ...(cajaData.dali||[]).map(p=>({...p,rest:'dali'}))
     ];
-  }else{
-    payments=(cajaData[cajaFilter]||[]).map(p=>({...p,rest:cajaFilter}));
   }
+  return(cajaData[cajaFilter]||[]).map(p=>({...p,rest:cajaFilter}));
+}
+
+function _getShift(p){
+  if(p.shift)return p.shift;
+  const h=parseInt((p.registered_at||'').substring(11,13),10);
+  return(h>=11&&h<16)?'manana':'noche';
+}
+
+function _shiftSummaryHtml(payments, shiftKey){
+  const SHIFT_TITLE=shiftKey==='manana'?'☀️ Turno Mañana — 11:00 a 16:00':'🌙 Turno Noche — 16:00 a 23:00';
+  const total=payments.reduce((s,p)=>s+(p.amount||0),0);
+  const byStatus={verified:0,wrong_account:0,unreadable:0,pending:0};
+  payments.forEach(p=>{ byStatus[p.verification_status||'pending']=(byStatus[p.verification_status||'pending']||0)+1; });
+  const canClose=byStatus.wrong_account===0&&byStatus.unreadable===0&&byStatus.pending===0;
+
+  return`<div class="caja-shift-header">
+    <div style="flex:1">
+      <div class="caja-shift-title">${SHIFT_TITLE}</div>
+      <div class="caja-shift-stats">
+        <span style="color:var(--green)">✅ ${byStatus.verified}</span>
+        <span style="color:var(--warn)">⚠️ ${byStatus.wrong_account}</span>
+        <span style="color:#6b7280">❓ ${byStatus.unreadable}</span>
+        <span style="color:var(--blue)">⏳ ${byStatus.pending}</span>
+        &nbsp;·&nbsp; Total: <strong>Bs ${total.toFixed(2)}</strong>
+      </div>
+    </div>
+    <div class="caja-shift-badge ${canClose?'caja-ok':'caja-nok'}">
+      ${canClose?'✅ Listo para cerrar':'🚫 Pendiente de revisión'}
+    </div>
+  </div>`;
+}
+
+function _cardHtml(p){
+  const vs=p.verification_status||'pending';
+  const restTag=p.rest==='oasis'
+    ?'<span class="caja-rest-tag caja-rest-o">🌴 Oasis</span>'
+    :'<span class="caja-rest-tag caja-rest-d">🎨 Dali</span>';
+  const imgEl=p.file_path
+    ?`<img class="caja-card-img" src="/comprobantes/${p.file_path}"
+         onclick="event.stopPropagation();openLightbox('/comprobantes/${p.file_path}')" alt="comprobante">`
+    :`<div class="caja-card-noimg">📄 Sin imagen</div>`;
+  const accountLine=p.extracted_account
+    ?`<div class="caja-card-account">🏦 ${p.extracted_account}</div>`:''
+  const desc=p.description?`<div class="caja-card-desc">${p.description}</div>`:'';
+  const amtStr=p.amount?`Bs ${(+p.amount).toFixed(2)}`:'—';
+  return`<div class="caja-card caja-vs-${vs}">
+    <div class="caja-vbadge" style="background:${V_COLOR[vs]}20;color:${V_COLOR[vs]};border-color:${V_COLOR[vs]}40">
+      ${V_ICON[vs]} ${V_LABEL[vs]}
+    </div>
+    ${imgEl}
+    <div class="caja-card-body">
+      <div class="caja-card-amount">${amtStr}</div>
+      <div class="caja-card-cashier">👤 ${p.cashier_name}</div>
+      ${desc}
+      ${accountLine}
+      <div class="caja-card-meta">${fmtTime(p.registered_at)}</div>
+      ${restTag}
+    </div>
+  </div>`;
+}
+
+function renderCaja(){
+  let payments=_getPayments();
   payments.sort((a,b)=>(b.registered_at||'').localeCompare(a.registered_at||''));
 
   const total=payments.reduce((s,p)=>s+(p.amount||0),0);
+  const alertCount=payments.filter(p=>p.verification_status==='wrong_account').length;
   document.getElementById('caja-total-amt').textContent='Bs '+total.toFixed(2);
   document.getElementById('caja-count').textContent=payments.length+' comprobante'+(payments.length===1?'':'s');
+  if(alertCount){
+    document.getElementById('caja-count').innerHTML+=
+      ` &nbsp;<span style="color:var(--warn);font-weight:700">⚠️ ${alertCount} incorrectos</span>`;
+  }
 
   const grid=document.getElementById('caja-grid');
   if(!payments.length){
-    grid.innerHTML='<div class="caja-empty">Sin comprobantes registrados.</div>';
+    grid.innerHTML='<div class="caja-empty">Sin comprobantes registrados hoy.</div>';
     return;
   }
 
-  grid.innerHTML=payments.map(p=>{
-    const restTag=p.rest==='oasis'
-      ?'<span class="caja-rest-tag caja-rest-o">🌴 Oasis</span>'
-      :'<span class="caja-rest-tag caja-rest-d">🎨 Dali</span>';
-    const imgEl=p.file_path
-      ?`<img class="caja-card-img" src="/comprobantes/${p.file_path}" alt="comprobante"
-           onclick="event.stopPropagation();openLightbox('/comprobantes/${p.file_path}')">`
-      :`<div class="caja-card-noimg">📄 Sin imagen</div>`;
-    const amtStr=p.amount?`Bs ${(+p.amount).toFixed(2)}`:'—';
-    const desc=p.description?`<div class="caja-card-desc">${p.description}</div>`:'';
-    return`<div class="caja-card">
-      ${imgEl}
-      <div class="caja-card-body">
-        <div class="caja-card-amount">${amtStr}</div>
-        <div class="caja-card-cashier">👤 ${p.cashier_name}</div>
-        ${desc}
-        <div class="caja-card-meta">${fmtTime(p.registered_at)}</div>
-        ${restTag}
-      </div>
+  const manana=payments.filter(p=>_getShift(p)==='manana');
+  const noche =payments.filter(p=>_getShift(p)==='noche');
+
+  let html='';
+  if(manana.length){
+    html+=`<div class="caja-shift-section">
+      ${_shiftSummaryHtml(manana,'manana')}
+      <div class="caja-grid-inner">${manana.map(_cardHtml).join('')}</div>
     </div>`;
-  }).join('');
+  }
+  if(noche.length){
+    html+=`<div class="caja-shift-section">
+      ${_shiftSummaryHtml(noche,'noche')}
+      <div class="caja-grid-inner">${noche.map(_cardHtml).join('')}</div>
+    </div>`;
+  }
+  grid.innerHTML=html;
 }
 
 function openLightbox(src){

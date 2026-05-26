@@ -17,6 +17,9 @@ services:
       - DB_PATH=${DB_PATH:-/data/restaurante.db}
       - COMPROBANTES_DIR=${COMPROBANTES_DIR:-/data/comprobantes}
       - FB_PAGE_SLUG=${FB_PAGE_SLUG:-OasisdeDali}
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+      - OASIS_ACCOUNT_NUMBER=${OASIS_ACCOUNT_NUMBER}
+      - DALI_ACCOUNT_NUMBER=${DALI_ACCOUNT_NUMBER}
     volumes:
       - db_data:/data
     networks:
@@ -39,6 +42,9 @@ services:
       - DB_PATH=${DB_PATH:-/data/restaurante.db}
       - COMPROBANTES_DIR=${COMPROBANTES_DIR:-/data/comprobantes}
       - FB_PAGE_SLUG=${FB_PAGE_SLUG:-OasisdeDali}
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+      - OASIS_ACCOUNT_NUMBER=${OASIS_ACCOUNT_NUMBER}
+      - DALI_ACCOUNT_NUMBER=${DALI_ACCOUNT_NUMBER}
     volumes:
       - db_data:/data
     networks:

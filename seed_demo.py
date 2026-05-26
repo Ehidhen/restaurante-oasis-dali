@@ -94,11 +94,34 @@ conn.execute("UPDATE daily_menu SET updated_at='2026-05-25 07:05:00' WHERE resta
 conn.commit()
 conn.close()
 
-# ── Comprobantes de pago demo ─────────────────────────────────────────────
-db.add_payment(oasis["id"], "Maria Garcia",  35.00, "QR Mesa 3",        file_id="demo1", file_path="")
-db.add_payment(oasis["id"], "Maria Garcia",  70.00, "QR Mesa 7 - 2 platos", file_id="demo2", file_path="")
-db.add_payment(oasis["id"], "Luis Mendoza",  35.00, "QR efectivo",      file_id="demo3", file_path="")
-db.add_payment(dali["id"],  "Ana Torres",    45.00, "QR Mesa 1",        file_id="demo4", file_path="")
-db.add_payment(dali["id"],  "Pedro Ramirez", 90.00, "QR Mesa 5 - combo", file_id="demo5", file_path="")
+# ── Comprobantes de pago demo (con turno y verificación) ──────────────────
+# Turno mañana — Oasis
+db.add_payment(oasis["id"], "Maria Garcia",  35.00, "QR Mesa 3",
+               file_id="demo1", file_path="", shift="manana",
+               verification_status="verified",  extracted_account="77712345", extracted_amount=35.0)
+db.add_payment(oasis["id"], "Maria Garcia",  70.00, "QR Mesa 7 - 2 platos",
+               file_id="demo2", file_path="", shift="manana",
+               verification_status="verified",  extracted_account="77712345", extracted_amount=70.0)
+db.add_payment(oasis["id"], "Luis Mendoza",  35.00, "QR efectivo",
+               file_id="demo3", file_path="", shift="manana",
+               verification_status="wrong_account", extracted_account="77799999", extracted_amount=35.0)
+# Turno noche — Oasis
+db.add_payment(oasis["id"], "Maria Garcia",  45.00, "QR Mesa 2",
+               file_id="demo6", file_path="", shift="noche",
+               verification_status="verified",  extracted_account="77712345", extracted_amount=45.0)
+db.add_payment(oasis["id"], "Maria Garcia",  35.00, "QR Mesa 9",
+               file_id="demo7", file_path="", shift="noche",
+               verification_status="unreadable", extracted_account="", extracted_amount=0)
+# Turno mañana — Dali
+db.add_payment(dali["id"],  "Ana Torres",    45.00, "QR Mesa 1",
+               file_id="demo4", file_path="", shift="manana",
+               verification_status="verified",  extracted_account="77798765", extracted_amount=45.0)
+db.add_payment(dali["id"],  "Pedro Ramirez", 90.00, "QR Mesa 5 - combo",
+               file_id="demo5", file_path="", shift="manana",
+               verification_status="verified",  extracted_account="77798765", extracted_amount=90.0)
+# Turno noche — Dali
+db.add_payment(dali["id"],  "Ana Torres",    35.00, "QR Mesa 3",
+               file_id="demo8", file_path="", shift="noche",
+               verification_status="pending",   extracted_account="", extracted_amount=0)
 
 print("OK - Datos de demo cargados correctamente.")
