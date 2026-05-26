@@ -58,6 +58,25 @@ db.add_extra_dish(dali["id"],  "Sopa sola",          2.00)
 tid = db.create_transfer(dali["id"], oasis["id"], 10, "Pedro Ramirez")
 db.update_transfer_status(tid, "sent")
 
+# ── Promos activas ────────────────────────────────────────────────────────
+db.add_promo(oasis["id"], "Frappe de frutas", "2x35 Bs", "Promo especial de lunes", source="facebook")
+db.add_promo(oasis["id"], "Alitas picantes",  "2x65 Bs", "Los martes con cualquier almuerzo", source="facebook")
+db.add_promo(dali["id"],  "Combo familiar",   "45 Bs",   "Seco + postre + refresco", source="manual")
+
+# ── Historial de bebidas (rotación últimos días) ───────────────────────────
+# Simula bebidas servidas recientemente para que la sugerencia evite repetir
+conn2 = sqlite3.connect("demo_restaurante.db")
+conn2.execute("INSERT INTO drink_history(restaurant_id,drink_name,date) VALUES(?,?,date('now','-1 day'))",
+              (oasis["id"], "Jugo de maracuyá"))
+conn2.execute("INSERT INTO drink_history(restaurant_id,drink_name,date) VALUES(?,?,date('now','-3 day'))",
+              (oasis["id"], "Frappe de maracuyá"))
+conn2.execute("INSERT INTO drink_history(restaurant_id,drink_name,date) VALUES(?,?,date('now','-2 day'))",
+              (dali["id"], "Limonada de maracuyá"))
+conn2.execute("INSERT INTO drink_history(restaurant_id,drink_name,date) VALUES(?,?,date('now','-5 day'))",
+              (dali["id"], "Jugo de naranja"))
+conn2.commit()
+conn2.close()
+
 # Ajustar timestamps para que se vean distintos en el demo
 conn = sqlite3.connect("demo_restaurante.db")
 conn.execute("UPDATE shortage_list SET updated_at = '2026-05-25 07:30:00' WHERE item_name='Tomates'")

@@ -2,6 +2,8 @@ from flask import Flask, render_template, jsonify
 import database as db
 import config
 from datetime import datetime
+from handlers.refrescos import sugerir_refresco
+from handlers.social import get_latest_posts_summary
 
 app = Flask(__name__)
 
@@ -28,6 +30,9 @@ def _build_restaurant_data(name: str) -> dict:
         estado = "POCAS_UNIDADES"
     else:
         estado = "ABIERTO"
+
+    promos = db.get_active_promos(rid)
+    drink_sug = sugerir_refresco(rid)
 
     return {
         "name": name,
@@ -72,6 +77,17 @@ def _build_restaurant_data(name: str) -> dict:
             }
             for t in transfers
         ],
+        "promos": [
+            {
+                "name": p["name"],
+                "price": p["price"],
+                "description": p["description"],
+                "source": p["source"],
+                "created_at": p["created_at"],
+            }
+            for p in promos
+        ],
+        "drink_suggestion": drink_sug,
     }
 
 
@@ -87,9 +103,10 @@ def index():
 def api_status():
     """JSON endpoint for auto-refresh polling."""
     return jsonify({
-        "oasis": _build_restaurant_data("oasis"),
-        "dali":  _build_restaurant_data("dali"),
-        "timestamp": datetime.now().isoformat(),
+        "oasis":        _build_restaurant_data("oasis"),
+        "dali":         _build_restaurant_data("dali"),
+        "social_posts": get_latest_posts_summary(),
+        "timestamp":    datetime.now().isoformat(),
     })
 
 

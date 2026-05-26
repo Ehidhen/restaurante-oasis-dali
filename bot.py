@@ -19,6 +19,8 @@ from handlers.inventario import (
 )
 from handlers.transferencias import cmd_transferir, cmd_confirmar_envio, cmd_confirmar_llegada
 from handlers.reportes import cmd_resumen_hoy, cmd_resumen_semana, cmd_comparar
+from handlers.refrescos import cmd_sugerir_refresco, cmd_nueva_promo, cmd_ver_promos
+from handlers.social import job_monitor_facebook
 
 logging.basicConfig(
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
@@ -163,6 +165,11 @@ def main():
     app.add_handler(CommandHandler("resumen_semana", cmd_resumen_semana))
     app.add_handler(CommandHandler("comparar",       cmd_comparar))
 
+    # ── Refrescos y promos ──
+    app.add_handler(CommandHandler("sugerir_refresco", cmd_sugerir_refresco))
+    app.add_handler(CommandHandler("nueva_promo",      cmd_nueva_promo))
+    app.add_handler(CommandHandler("ver_promos",       cmd_ver_promos))
+
     # ── Jobs programados ──
     job_queue = app.job_queue
 
@@ -186,6 +193,14 @@ def main():
         interval=900,
         first=60,
         name="cross_transfer_check"
+    )
+
+    # Monitor Facebook cada 30 minutos
+    job_queue.run_repeating(
+        job_monitor_facebook,
+        interval=1800,
+        first=120,
+        name="facebook_monitor"
     )
 
     logger.info("Bot iniciado. Escuchando...")

@@ -85,6 +85,37 @@ def init_db():
             updated_at      TEXT DEFAULT (datetime('now','localtime'))
         );
 
+        CREATE TABLE IF NOT EXISTS social_posts (
+            id          INTEGER PRIMARY KEY AUTOINCREMENT,
+            platform    TEXT DEFAULT 'facebook',
+            post_id     TEXT UNIQUE,
+            content     TEXT,
+            image_url   TEXT,
+            post_url    TEXT,
+            detected_at TEXT DEFAULT (datetime('now','localtime')),
+            notified    INTEGER DEFAULT 0
+        );
+
+        CREATE TABLE IF NOT EXISTS drink_history (
+            id            INTEGER PRIMARY KEY AUTOINCREMENT,
+            restaurant_id INTEGER NOT NULL REFERENCES restaurants(id),
+            drink_name    TEXT NOT NULL,
+            date          TEXT NOT NULL,
+            suggested     INTEGER DEFAULT 0
+        );
+
+        CREATE TABLE IF NOT EXISTS promos (
+            id            INTEGER PRIMARY KEY AUTOINCREMENT,
+            restaurant_id INTEGER NOT NULL REFERENCES restaurants(id),
+            name          TEXT NOT NULL,
+            price         TEXT,
+            description   TEXT,
+            source        TEXT DEFAULT 'manual',
+            image_url     TEXT,
+            active        INTEGER DEFAULT 1,
+            created_at    TEXT DEFAULT (datetime('now','localtime'))
+        );
+
         CREATE TABLE IF NOT EXISTS transfers (
             id              INTEGER PRIMARY KEY AUTOINCREMENT,
             from_restaurant INTEGER NOT NULL REFERENCES restaurants(id),
@@ -410,3 +441,93 @@ def get_all_today_transfers() -> list:
             WHERE date(t.created_at) = ?
             ORDER BY t.created_at DESC
         """, (date,)).fetchall()
+
+
+# ── Social posts ────────────────────────────────────────────────────────────
+
+def save_social_post(post_id: str, content: str, image_url: str,
+                     post_url: str, platform: str = "facebook") -> bool:
+    """Returns True if it's a new post (not seen before)."""
+    with get_conn() as conn:
+        try:
+            conn.execute("""
+                INSERT INTO social_posts (platform, post_id, content, image_url, post_url)
+                VALUES (?, ?, ?, ?, ?)
+            """, (platform, post_id, content, image_url, post_url))
+            conn.commit()
+            return True
+        except Exception:
+            return False
+
+
+def get_unnotified_posts() -> list:
+    with get_conn() as conn:
+        return conn.execute(
+            "SELECT * FROM social_posts WHERE notified = 0 ORDER BY detected_at DESC"
+        ).fetchall()
+
+
+def mark_post_notified(post_id: str):
+    with get_conn() as conn:
+        conn.execute(
+            "UPDATE social_posts SET notified = 1 WHERE post_id = ?", (post_id,)
+        )
+        conn.commit()
+
+
+def get_latest_social_posts(limit: int = 3) -> list:
+    with get_conn() as conn:
+        return conn.execute(
+            "SELECT * FROM social_posts ORDER BY detected_at DESC LIMIT ?", (limit,)
+        ).fetchall()
+
+
+# ── Drink history & suggestions ─────────────────────────────────────────────
+
+def log_drink(restaurant_id: int, drink_name: str, suggested: bool = False):
+    with get_conn() as conn:
+        conn.execute("""
+            INSERT OR IGNORE INTO drink_history (restaurant_id, drink_name, date, suggested)
+            VALUES (?, ?, ?, ?)
+        """, (restaurant_id, drink_name, today(), 1 if suggested else 0))
+        conn.commit()
+
+
+def get_recent_drinks(restaurant_id: int, days: int = 14) -> list:
+    with get_conn() as conn:
+        return conn.execute("""
+            SELECT drink_name, MAX(date) as last_used, COUNT(*) as times
+            FROM drink_history
+            WHERE restaurant_id = ?
+              AND date >= date('now', ?, 'localtime')
+            GROUP BY drink_name
+            ORDER BY last_used DESC
+        """, (restaurant_id, f"-{days} days")).fetchall()
+
+
+# ── Promos ──────────────────────────────────────────────────────────────────
+
+def add_promo(restaurant_id: int, name: str, price: str,
+              description: str = "", source: str = "manual",
+              image_url: str = "") -> int:
+    with get_conn() as conn:
+        cur = conn.execute("""
+            INSERT INTO promos (restaurant_id, name, price, description, source, image_url)
+            VALUES (?, ?, ?, ?, ?, ?)
+        """, (restaurant_id, name, price, description, source, image_url))
+        conn.commit()
+        return cur.lastrowid
+
+
+def get_active_promos(restaurant_id: int) -> list:
+    with get_conn() as conn:
+        return conn.execute("""
+            SELECT * FROM promos WHERE restaurant_id = ? AND active = 1
+            ORDER BY created_at DESC LIMIT 5
+        """, (restaurant_id,)).fetchall()
+
+
+def deactivate_promo(promo_id: int):
+    with get_conn() as conn:
+        conn.execute("UPDATE promos SET active = 0 WHERE id = ?", (promo_id,))
+        conn.commit()
