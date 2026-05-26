@@ -1,34 +1,49 @@
-version: "3.9"
-
 services:
 
   bot:
     build: .
     command: python bot.py
     restart: always
-    env_file: .env
+    environment:
+      - BOT_TOKEN=${BOT_TOKEN}
+      - ADMIN_IDS=${ADMIN_IDS}
+      - OASIS_SUPERVISOR_IDS=${OASIS_SUPERVISOR_IDS}
+      - DALI_SUPERVISOR_IDS=${DALI_SUPERVISOR_IDS}
+      - OASIS_CHIEF_IDS=${OASIS_CHIEF_IDS}
+      - DALI_CHIEF_IDS=${DALI_CHIEF_IDS}
+      - OASIS_CASHIER_IDS=${OASIS_CASHIER_IDS}
+      - DALI_CASHIER_IDS=${DALI_CASHIER_IDS}
+      - WEB_URL=${WEB_URL:-http://localhost:5000}
+      - DB_PATH=${DB_PATH:-/data/restaurante.db}
     volumes:
       - db_data:/data
-    depends_on: []
     networks:
-      - internal
+      - dokploy-network
 
   web:
     build: .
     command: gunicorn --bind 0.0.0.0:5000 --workers 2 --timeout 60 app:app
     restart: always
-    env_file: .env
+    environment:
+      - BOT_TOKEN=${BOT_TOKEN}
+      - ADMIN_IDS=${ADMIN_IDS}
+      - OASIS_SUPERVISOR_IDS=${OASIS_SUPERVISOR_IDS}
+      - DALI_SUPERVISOR_IDS=${DALI_SUPERVISOR_IDS}
+      - OASIS_CHIEF_IDS=${OASIS_CHIEF_IDS}
+      - DALI_CHIEF_IDS=${DALI_CHIEF_IDS}
+      - OASIS_CASHIER_IDS=${OASIS_CASHIER_IDS}
+      - DALI_CASHIER_IDS=${DALI_CASHIER_IDS}
+      - WEB_URL=${WEB_URL:-http://localhost:5000}
+      - DB_PATH=${DB_PATH:-/data/restaurante.db}
     volumes:
       - db_data:/data
-    ports:
-      - "5000:5000"
     networks:
-      - internal
+      - dokploy-network
 
 volumes:
   db_data:
     driver: local
 
 networks:
-  internal:
-    driver: bridge
+  dokploy-network:
+    external: true
