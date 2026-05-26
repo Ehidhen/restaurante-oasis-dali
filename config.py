@@ -22,6 +22,9 @@ OASIS_CHIEF_IDS      = _parse_ids("OASIS_CHIEF_IDS")
 DALI_CHIEF_IDS       = _parse_ids("DALI_CHIEF_IDS")
 OASIS_CASHIER_IDS    = _parse_ids("OASIS_CASHIER_IDS")
 DALI_CASHIER_IDS     = _parse_ids("DALI_CASHIER_IDS")
+# Meseros — pueden trabajar en cualquier restaurante, declaran su ubicación con /mi_restaurante
+OASIS_MESERO_IDS     = _parse_ids("OASIS_MESERO_IDS")
+DALI_MESERO_IDS      = _parse_ids("DALI_MESERO_IDS")
 
 
 def get_role_and_restaurant(telegram_id: str) -> tuple[str, str] | tuple[None, None]:
@@ -41,14 +44,18 @@ def get_role_and_restaurant(telegram_id: str) -> tuple[str, str] | tuple[None, N
         return ("cashier", "oasis")
     if tid in DALI_CASHIER_IDS:
         return ("cashier", "dali")
+    if tid in OASIS_MESERO_IDS:
+        return ("mesero", "oasis")
+    if tid in DALI_MESERO_IDS:
+        return ("mesero", "dali")
     return (None, None)
 
 
 def all_ids_for_restaurant(restaurant_name: str) -> set[str]:
     """All known telegram IDs that belong to a restaurant."""
     if restaurant_name == "oasis":
-        return OASIS_SUPERVISOR_IDS | OASIS_CHIEF_IDS | OASIS_CASHIER_IDS
-    return DALI_SUPERVISOR_IDS | DALI_CHIEF_IDS | DALI_CASHIER_IDS
+        return OASIS_SUPERVISOR_IDS | OASIS_CHIEF_IDS | OASIS_CASHIER_IDS | OASIS_MESERO_IDS
+    return DALI_SUPERVISOR_IDS | DALI_CHIEF_IDS | DALI_CASHIER_IDS | DALI_MESERO_IDS
 
 
 ALERT_LOW_THRESHOLD = 5

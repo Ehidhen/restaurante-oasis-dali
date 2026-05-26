@@ -76,6 +76,7 @@ async def cmd_start(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
         "supervisor": "Supervisora 👩‍💼",
         "kitchen_chief": "Jefe de Cocina 👨‍🍳",
         "cashier": "Cajero/a 💵",
+        "mesero": "Mesero/a 🍽",
     }
 
     commands_by_role = {
@@ -86,7 +87,8 @@ async def cmd_start(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
             "/resumen_hoy — Ventas del día\n"
             "/resumen_semana — Resumen semanal\n"
             "/comparar — Comparativa Oasis vs Dali\n"
-            "/faltantes — Lista de faltantes"
+            "/faltantes — Lista de faltantes\n"
+            "/comprobantes_dia YYYY-MM-DD — Comprobantes de un día"
         ),
         "supervisor": (
             "/menu_hoy — Menú del día\n"
@@ -96,7 +98,9 @@ async def cmd_start(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
             "/agregar_faltante Ítem | Cantidad\n"
             "/transferir N — Solicitar almuerzos\n"
             "/confirmar_envio — Confirmar envío\n"
-            "/confirmar_llegada — Confirmar llegada"
+            "/confirmar_llegada — Confirmar llegada\n"
+            "/ver_pagos — Ver comprobantes hoy\n"
+            "/comprobantes_dia YYYY-MM-DD — Comprobantes de un día"
         ),
         "kitchen_chief": (
             "/definir_menu Sopa | Plato | Refresco | Precio | Cantidad\n"
@@ -119,7 +123,18 @@ async def cmd_start(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
             "/quedan — Almuerzos disponibles\n"
             "/venta — Registrar 1 almuerzo\n"
             "/venta N — Registrar N almuerzos\n"
-            "/resumen_hoy — Ventas del día"
+            "/resumen_hoy — Ventas del día\n"
+            "/registrar_pago [monto] [desc] — Registrar comprobante\n"
+            "/ver_pagos — Ver comprobantes hoy\n"
+            "/cerrar_caja — Resumen del turno"
+        ),
+        "mesero": (
+            "/mi_restaurante — Ver/cambiar restaurante actual\n"
+            "/mi_restaurante oasis — Trabajar en Oasis hoy\n"
+            "/mi_restaurante dali — Trabajar en Dali hoy\n"
+            "/registrar_pago [monto] [desc] — Registrar comprobante QR\n"
+            "/menu_hoy — Ver menú del día\n"
+            "/quedan — Almuerzos disponibles"
         ),
     }
 

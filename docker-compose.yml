@@ -13,6 +13,8 @@ services:
       - DALI_CHIEF_IDS=${DALI_CHIEF_IDS}
       - OASIS_CASHIER_IDS=${OASIS_CASHIER_IDS}
       - DALI_CASHIER_IDS=${DALI_CASHIER_IDS}
+      - OASIS_MESERO_IDS=${OASIS_MESERO_IDS:-}
+      - DALI_MESERO_IDS=${DALI_MESERO_IDS:-}
       - WEB_URL=${WEB_URL:-http://localhost:5000}
       - DB_PATH=${DB_PATH:-/data/restaurante.db}
       - COMPROBANTES_DIR=${COMPROBANTES_DIR:-/data/comprobantes}
@@ -38,6 +40,8 @@ services:
       - DALI_CHIEF_IDS=${DALI_CHIEF_IDS}
       - OASIS_CASHIER_IDS=${OASIS_CASHIER_IDS}
       - DALI_CASHIER_IDS=${DALI_CASHIER_IDS}
+      - OASIS_MESERO_IDS=${OASIS_MESERO_IDS:-}
+      - DALI_MESERO_IDS=${DALI_MESERO_IDS:-}
       - WEB_URL=${WEB_URL:-http://localhost:5000}
       - DB_PATH=${DB_PATH:-/data/restaurante.db}
       - COMPROBANTES_DIR=${COMPROBANTES_DIR:-/data/comprobantes}

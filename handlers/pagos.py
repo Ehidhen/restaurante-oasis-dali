@@ -38,7 +38,7 @@ def shift_label(shift: str) -> str:
 
 # ── Registro de comprobante ──────────────────────────────────────────────────
 
-@require_role("cashier", "supervisor", "boss")
+@require_role("cashier", "supervisor", "boss", "mesero")
 async def cmd_registrar_pago(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
     """
     /registrar_pago [monto] [descripcion]
@@ -78,7 +78,10 @@ async def cmd_registrar_pago(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
 async def handle_comprobante_photo(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
     rid    = ctx.user_data["restaurant_id"]
     rname  = ctx.user_data["restaurant_name"]
-    cashier = ctx.user_data.get("username") or update.effective_user.first_name or "Caja"
+    cashier = (ctx.user_data.get("username")
+               or update.effective_user.full_name
+               or update.effective_user.first_name
+               or "Caja")
     amount  = ctx.user_data.get("pago_amount", 0.0)
     desc    = ctx.user_data.get("pago_description", "")
     shift   = get_current_shift()

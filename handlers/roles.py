@@ -9,15 +9,30 @@ ROLE_LABELS = {
     "supervisor": "Supervisora",
     "kitchen_chief": "Jefe de Cocina",
     "cashier": "Cajero/a",
+    "mesero": "Mesero/a",
 }
 
 
 def _get_user_context(telegram_id: str) -> tuple[str, str, int | None]:
-    """Returns (role, restaurant_name, restaurant_id). Reads from DB first, falls back to config."""
+    """Returns (role, restaurant_name, restaurant_id). Reads from DB first, falls back to config.
+    For meseros: uses current_restaurant_id if set (allows switching between restaurants)."""
     user = db.get_user(str(telegram_id))
     if user:
-        rest = db.get_restaurant_by_id(user["restaurant_id"]) if user["restaurant_id"] else None
-        return user["role"], (rest["name"] if rest else None), user["restaurant_id"]
+        role = user["role"]
+        # Meseros can switch restaurants — use current_restaurant_id if set
+        active_rid = None
+        if role == "mesero":
+            try:
+                active_rid = user["current_restaurant_id"]
+            except (IndexError, KeyError):
+                active_rid = None
+            if not active_rid:
+                active_rid = user["restaurant_id"]
+        else:
+            active_rid = user["restaurant_id"]
+
+        rest = db.get_restaurant_by_id(active_rid) if active_rid else None
+        return role, (rest["name"] if rest else None), (rest["id"] if rest else None)
 
     role, rest_name = config.get_role_and_restaurant(str(telegram_id))
     if role is None:
@@ -26,7 +41,6 @@ def _get_user_context(telegram_id: str) -> tuple[str, str, int | None]:
     # Auto-register on first encounter
     rest = db.get_restaurant(rest_name) if rest_name else None
     rid = rest["id"] if rest else None
-    # We don't have the name here; it'll be filled in /start
     return role, rest_name, rid
 
 
@@ -53,6 +67,11 @@ def require_role(*allowed_roles):
             ctx.user_data["role"] = role
             ctx.user_data["restaurant_name"] = rest_name
             ctx.user_data["restaurant_id"] = rid
+            ctx.user_data["username"] = (
+                update.effective_user.full_name
+                or update.effective_user.first_name
+                or "Usuario"
+            )
             return await func(update, ctx, *args, **kwargs)
         return wrapper
     return decorator
@@ -73,6 +92,11 @@ def any_role(func):
         ctx.user_data["role"] = role
         ctx.user_data["restaurant_name"] = rest_name
         ctx.user_data["restaurant_id"] = rid
+        ctx.user_data["username"] = (
+            update.effective_user.full_name
+            or update.effective_user.first_name
+            or "Usuario"
+        )
         return await func(update, ctx, *args, **kwargs)
     return wrapper
 
@@ -84,6 +108,11 @@ def inject_user(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
     ctx.user_data["role"] = role
     ctx.user_data["restaurant_name"] = rest_name
     ctx.user_data["restaurant_id"] = rid
+    ctx.user_data["username"] = (
+        update.effective_user.full_name
+        or update.effective_user.first_name
+        or "Usuario"
+    )
     return role, rest_name, rid
 
 

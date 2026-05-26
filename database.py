@@ -24,11 +24,12 @@ def init_db():
         );
 
         CREATE TABLE IF NOT EXISTS users (
-            id           INTEGER PRIMARY KEY AUTOINCREMENT,
-            telegram_id  TEXT UNIQUE NOT NULL,
-            name         TEXT NOT NULL,
-            role         TEXT NOT NULL,
-            restaurant_id INTEGER REFERENCES restaurants(id)
+            id                   INTEGER PRIMARY KEY AUTOINCREMENT,
+            telegram_id          TEXT UNIQUE NOT NULL,
+            name                 TEXT NOT NULL,
+            role                 TEXT NOT NULL,
+            restaurant_id        INTEGER REFERENCES restaurants(id),
+            current_restaurant_id INTEGER REFERENCES restaurants(id)
         );
 
         CREATE TABLE IF NOT EXISTS daily_menu (
@@ -148,6 +149,11 @@ def init_db():
     c.execute("INSERT OR IGNORE INTO restaurants (name) VALUES ('oasis')")
     c.execute("INSERT OR IGNORE INTO restaurants (name) VALUES ('dali')")
 
+    # Migrate users table — add current_restaurant_id if upgrading from older schema
+    _existing_users = {row[1] for row in c.execute("PRAGMA table_info(users)").fetchall()}
+    if "current_restaurant_id" not in _existing_users:
+        c.execute("ALTER TABLE users ADD COLUMN current_restaurant_id INTEGER REFERENCES restaurants(id)")
+
     # Migrate payments table — add new columns if upgrading from older schema
     _existing = {row[1] for row in c.execute("PRAGMA table_info(payments)").fetchall()}
     for col, defn in [
@@ -197,16 +203,30 @@ def get_user(telegram_id: str) -> sqlite3.Row | None:
         ).fetchone()
 
 
-def upsert_user(telegram_id: str, name: str, role: str, restaurant_id: int):
+def upsert_user(telegram_id: str, name: str, role: str, restaurant_id: int,
+                current_restaurant_id: int | None = None):
+    curr_rid = current_restaurant_id if current_restaurant_id is not None else restaurant_id
     with get_conn() as conn:
         conn.execute("""
-            INSERT INTO users (telegram_id, name, role, restaurant_id)
-            VALUES (?, ?, ?, ?)
+            INSERT INTO users (telegram_id, name, role, restaurant_id, current_restaurant_id)
+            VALUES (?, ?, ?, ?, ?)
             ON CONFLICT(telegram_id) DO UPDATE SET
                 name=excluded.name, role=excluded.role,
                 restaurant_id=excluded.restaurant_id
-        """, (str(telegram_id), name, role, restaurant_id))
+        """, (str(telegram_id), name, role, restaurant_id, curr_rid))
         conn.commit()
+
+
+def set_user_restaurant(telegram_id: str, restaurant_id: int) -> bool:
+    """Update current_restaurant_id (active working location) for a user.
+    Returns True if the user record existed and was updated."""
+    with get_conn() as conn:
+        cur = conn.execute("""
+            UPDATE users SET current_restaurant_id = ?
+            WHERE telegram_id = ?
+        """, (restaurant_id, str(telegram_id)))
+        conn.commit()
+        return cur.rowcount > 0
 
 
 def get_users_by_role_and_restaurant(role: str, restaurant_id: int) -> list:
@@ -638,6 +658,19 @@ def get_payments_by_shift(restaurant_id: int, shift: str,
             WHERE restaurant_id=? AND shift=? AND date(registered_at)=?
             ORDER BY registered_at DESC
         """, (restaurant_id, shift, d)).fetchall()
+
+
+def get_payments_by_date(restaurant_id: int, date: str) -> list:
+    """Returns all payments for a restaurant on a specific date, ASC order."""
+    with get_conn() as conn:
+        return conn.execute("""
+            SELECT id, cashier_name, amount, description, file_id, file_path,
+                   shift, verification_status, extracted_account, extracted_amount,
+                   verification_note, registered_at
+            FROM payments
+            WHERE restaurant_id=? AND date(registered_at)=?
+            ORDER BY registered_at ASC
+        """, (restaurant_id, date)).fetchall()
 
 
 def get_all_payments(limit: int = 200) -> list:
