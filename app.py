@@ -35,11 +35,13 @@ def _build_restaurant_data(name: str) -> dict:
         "estado": estado,
         "qty": qty,
         "menu": {
-            "soup":      menu["soup"]      if menu else None,
-            "main_dish": menu["main_dish"] if menu else None,
-            "drink":     menu["drink"]     if menu else None,
-            "price":     menu["price"]     if menu else 0.0,
-            "initial":   menu["initial_qty"] if menu else 0,
+            "soup":       menu["soup"]       if menu else None,
+            "main_dish":  menu["main_dish"]  if menu else None,
+            "drink":      menu["drink"]      if menu else None,
+            "price":      menu["price"]      if menu else 0.0,
+            "initial":    menu["initial_qty"] if menu else 0,
+            "updated_by": menu["updated_by"] if menu else "—",
+            "updated_at": menu["updated_at"] if menu else "—",
         } if menu else None,
         "sales": {
             "almuerzos": alm_qty,
@@ -52,9 +54,11 @@ def _build_restaurant_data(name: str) -> dict:
         },
         "shortages": [
             {
-                "item_name": s["item_name"],
+                "item_name":       s["item_name"],
                 "quantity_needed": s["quantity_needed"],
-                "status": s["status"],
+                "status":          s["status"],
+                "updated_by":      s["updated_by"] if "updated_by" in s.keys() else "Sistema",
+                "updated_at":      s["updated_at"] if "updated_at" in s.keys() else "—",
             }
             for s in shortages
         ],

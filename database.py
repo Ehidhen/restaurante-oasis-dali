@@ -41,6 +41,8 @@ def init_db():
             price         REAL DEFAULT 0,
             initial_qty   INTEGER DEFAULT 0,
             current_qty   INTEGER DEFAULT 0,
+            updated_by    TEXT DEFAULT 'Sistema',
+            updated_at    TEXT DEFAULT (datetime('now','localtime')),
             UNIQUE(restaurant_id, date)
         );
 
@@ -78,7 +80,9 @@ def init_db():
             item_name       TEXT NOT NULL,
             quantity_needed TEXT NOT NULL,
             date            TEXT NOT NULL,
-            status          TEXT DEFAULT 'pending'
+            status          TEXT DEFAULT 'pending',
+            updated_by      TEXT DEFAULT 'Sistema',
+            updated_at      TEXT DEFAULT (datetime('now','localtime'))
         );
 
         CREATE TABLE IF NOT EXISTS transfers (
@@ -177,18 +181,20 @@ def get_menu(restaurant_id: int, date: str | None = None) -> sqlite3.Row | None:
 
 
 def set_menu(restaurant_id: int, soup: str, main_dish: str, drink: str,
-             price: float, initial_qty: int):
+             price: float, initial_qty: int, updated_by: str = "Sistema"):
     date = today()
+    now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     with get_conn() as conn:
         conn.execute("""
             INSERT INTO daily_menu
-                (restaurant_id, date, soup, main_dish, drink, price, initial_qty, current_qty)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                (restaurant_id, date, soup, main_dish, drink, price, initial_qty, current_qty, updated_by, updated_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ON CONFLICT(restaurant_id, date) DO UPDATE SET
                 soup=excluded.soup, main_dish=excluded.main_dish,
                 drink=excluded.drink, price=excluded.price,
-                initial_qty=excluded.initial_qty, current_qty=excluded.current_qty
-        """, (restaurant_id, date, soup, main_dish, drink, price, initial_qty, initial_qty))
+                initial_qty=excluded.initial_qty, current_qty=excluded.current_qty,
+                updated_by=excluded.updated_by, updated_at=excluded.updated_at
+        """, (restaurant_id, date, soup, main_dish, drink, price, initial_qty, initial_qty, updated_by, now))
         conn.commit()
 
 
@@ -303,13 +309,15 @@ def get_weekly_summary(restaurant_id: int) -> list:
 
 # ── Faltantes ───────────────────────────────────────────────────────────────
 
-def add_shortage(restaurant_id: int, item_name: str, quantity_needed: str):
+def add_shortage(restaurant_id: int, item_name: str, quantity_needed: str,
+                 updated_by: str = "Sistema"):
     date = today()
+    now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     with get_conn() as conn:
         conn.execute("""
-            INSERT INTO shortage_list (restaurant_id, item_name, quantity_needed, date)
-            VALUES (?, ?, ?, ?)
-        """, (restaurant_id, item_name, quantity_needed, date))
+            INSERT INTO shortage_list (restaurant_id, item_name, quantity_needed, date, updated_by, updated_at)
+            VALUES (?, ?, ?, ?, ?, ?)
+        """, (restaurant_id, item_name, quantity_needed, date, updated_by, now))
         conn.commit()
 
 
@@ -322,12 +330,14 @@ def get_shortages(restaurant_id: int, status: str = "pending") -> list:
         """, (restaurant_id, status)).fetchall()
 
 
-def mark_shortage_bought(restaurant_id: int, item_name: str) -> bool:
+def mark_shortage_bought(restaurant_id: int, item_name: str,
+                         updated_by: str = "Sistema") -> bool:
+    now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     with get_conn() as conn:
         cur = conn.execute("""
-            UPDATE shortage_list SET status = 'bought'
+            UPDATE shortage_list SET status = 'bought', updated_by = ?, updated_at = ?
             WHERE restaurant_id = ? AND item_name LIKE ? AND status = 'pending'
-        """, (restaurant_id, f"%{item_name}%"))
+        """, (updated_by, now, restaurant_id, f"%{item_name}%"))
         conn.commit()
         return cur.rowcount > 0
 

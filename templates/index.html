@@ -1,412 +1,924 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Panel — Oasis &amp; Dali</title>
-  <style>
-    :root {
-      --verde:    #22c55e;
-      --amarillo: #f59e0b;
-      --rojo:     #ef4444;
-      --azul:     #3b82f6;
-      --gris:     #6b7280;
-      --bg:       #0f172a;
-      --card:     #1e293b;
-      --border:   #334155;
-      --text:     #e2e8f0;
-      --muted:    #94a3b8;
-    }
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-    body {
-      background: var(--bg);
-      color: var(--text);
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-      min-height: 100vh;
-    }
-    header {
-      background: var(--card);
-      border-bottom: 1px solid var(--border);
-      padding: 1rem 1.5rem;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      flex-wrap: wrap;
-      gap: .5rem;
-    }
-    header h1 { font-size: 1.25rem; font-weight: 700; }
-    .timestamp { font-size: .75rem; color: var(--muted); }
-    .refresh-bar {
-      font-size: .7rem;
-      color: var(--muted);
-      display: flex;
-      align-items: center;
-      gap: .4rem;
-    }
-    .dot {
-      width: 8px; height: 8px; border-radius: 50%;
-      background: var(--verde);
-      animation: pulse 2s infinite;
-    }
-    @keyframes pulse {
-      0%, 100% { opacity: 1; }
-      50%       { opacity: .3; }
-    }
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Oasis & Dali — Panel</title>
+<style>
+/* ── Reset & variables ───────────────────────────────────────────── */
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#060d1a;
+  --grid:#0e1f35;
+  --road:#111c2e;
+  --sidewalk:#152234;
+  --oasis:#00e5a0;
+  --oasis-dim:#00a06e;
+  --dali:#ff6b35;
+  --dali-dim:#b84d25;
+  --warn:#f59e0b;
+  --danger:#ef4444;
+  --card:#0f1e30;
+  --card2:#162840;
+  --border:#1e3a5f;
+  --text:#cde;
+  --muted:#4a7090;
+  --white:#e8f4ff;
+  --green:#22c55e;
+  --blue:#3b82f6;
+}
+body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,sans-serif;min-height:100vh;overflow-x:hidden}
 
-    main {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 1.5rem;
-      padding: 1.5rem;
-      max-width: 1400px;
-      margin: 0 auto;
-    }
-    @media (max-width: 768px) {
-      main { grid-template-columns: 1fr; padding: 1rem; }
-    }
+/* ── HUD Header ──────────────────────────────────────────────────── */
+#hud-bar{
+  position:fixed;top:0;left:0;right:0;z-index:100;
+  background:rgba(6,13,26,.92);backdrop-filter:blur(12px);
+  border-bottom:1px solid var(--border);
+  display:flex;align-items:center;justify-content:space-between;
+  padding:.5rem 1.25rem;gap:1rem;flex-wrap:wrap;
+}
+.hud-title{font-size:1rem;font-weight:700;letter-spacing:.05em;color:var(--white)}
+.hud-title span{color:var(--oasis)}
+.hud-right{display:flex;align-items:center;gap:.75rem;flex-wrap:wrap}
+.live-dot{width:8px;height:8px;border-radius:50%;background:var(--green);
+  animation:blink 1.8s infinite;flex-shrink:0}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.2}}
+.hud-ts{font-size:.7rem;color:var(--muted)}
+.btn-compare{
+  background:linear-gradient(135deg,#1a3a5c,#0f2540);
+  border:1px solid var(--border);color:var(--blue);
+  padding:.35rem .9rem;border-radius:6px;font-size:.75rem;font-weight:600;
+  cursor:pointer;transition:all .2s;letter-spacing:.03em;
+}
+.btn-compare:hover{background:var(--blue);color:#fff;border-color:var(--blue)}
 
-    .restaurant-col { display: flex; flex-direction: column; gap: 1rem; }
+/* ── City Map ────────────────────────────────────────────────────── */
+#city{
+  padding-top:56px;min-height:100vh;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  position:relative;overflow:hidden;
+}
+/* Grid background */
+#city::before{
+  content:'';position:absolute;inset:0;
+  background-image:
+    linear-gradient(var(--grid) 1px,transparent 1px),
+    linear-gradient(90deg,var(--grid) 1px,transparent 1px);
+  background-size:48px 48px;
+  opacity:.5;
+}
+.city-label{
+  position:relative;font-size:.65rem;letter-spacing:.15em;
+  text-transform:uppercase;color:var(--muted);margin-bottom:1rem;
+  text-align:center;
+}
 
-    .card {
-      background: var(--card);
-      border: 1px solid var(--border);
-      border-radius: 12px;
-      padding: 1.25rem;
-    }
-    .card-title {
-      font-size: .7rem;
-      font-weight: 600;
-      letter-spacing: .08em;
-      text-transform: uppercase;
-      color: var(--muted);
-      margin-bottom: .75rem;
-    }
+/* Road between buildings */
+.city-scene{
+  position:relative;display:flex;align-items:flex-end;
+  gap:0;width:min(900px,96vw);
+}
+.road{
+  flex:1;background:var(--road);
+  border-top:3px solid #1e3248;border-bottom:3px solid #1e3248;
+  height:220px;position:relative;display:flex;align-items:center;
+  justify-content:center;overflow:hidden;
+}
+/* Dashed center line */
+.road::after{
+  content:'';position:absolute;
+  top:50%;left:0;right:0;height:3px;
+  background:repeating-linear-gradient(90deg,#f59e0b 0,#f59e0b 24px,transparent 24px,transparent 48px);
+  transform:translateY(-50%);opacity:.4;
+}
+/* Moving delivery car */
+.car{
+  position:absolute;width:36px;height:20px;
+  background:#1e3a5c;border-radius:4px;
+  border:1px solid #2a5080;
+  animation:drive 6s linear infinite;
+}
+.car::before{content:'🚕';font-size:.9rem;position:absolute;top:-2px;left:6px}
+@keyframes drive{from{left:-50px}to{left:calc(100% + 50px)}}
 
-    /* ── Estado principal ── */
-    .rest-header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      flex-wrap: wrap;
-      gap: .5rem;
-      margin-bottom: 1rem;
-    }
-    .rest-name { font-size: 1.4rem; font-weight: 700; }
+/* ── Building block ──────────────────────────────────────────────── */
+.building{
+  width:260px;flex-shrink:0;cursor:pointer;
+  display:flex;flex-direction:column;align-items:center;
+  transition:transform .25s;user-select:none;
+}
+.building:hover{transform:translateY(-6px)}
+.building:active{transform:scale(.97)}
 
-    .badge {
-      padding: .25rem .75rem;
-      border-radius: 999px;
-      font-size: .75rem;
-      font-weight: 600;
-      text-transform: uppercase;
-      letter-spacing: .05em;
-    }
-    .badge-green  { background: rgba(34,197,94,.2);  color: var(--verde); }
-    .badge-yellow { background: rgba(245,158,11,.2); color: var(--amarillo); }
-    .badge-red    { background: rgba(239,68,68,.2);  color: var(--rojo); }
+/* Roof (top-down view) */
+.roof{
+  width:100%;border-radius:8px 8px 0 0;padding:1rem 1.2rem .8rem;
+  position:relative;overflow:hidden;
+}
+.roof-oasis{background:linear-gradient(160deg,#0a2d1e,#0d3d28)}
+.roof-dali{background:linear-gradient(160deg,#2d180a,#3d2208)}
 
-    /* ── Contador grande ── */
-    .qty-display {
-      text-align: center;
-      padding: 1.5rem 1rem;
-    }
-    .qty-number {
-      font-size: 5rem;
-      font-weight: 800;
-      line-height: 1;
-    }
-    .qty-number.green  { color: var(--verde); }
-    .qty-number.yellow { color: var(--amarillo); }
-    .qty-number.red    { color: var(--rojo); }
-    .qty-label { font-size: .85rem; color: var(--muted); margin-top: .25rem; }
+/* Roof grid tiles */
+.roof::before{
+  content:'';position:absolute;inset:0;
+  background-image:
+    linear-gradient(rgba(255,255,255,.04) 1px,transparent 1px),
+    linear-gradient(90deg,rgba(255,255,255,.04) 1px,transparent 1px);
+  background-size:20px 20px;
+}
+/* AC units on roof */
+.ac-unit{
+  position:absolute;right:14px;top:12px;
+  width:22px;height:16px;background:#0d1f14;border:1px solid #1a4030;
+  border-radius:3px;
+}
+.ac-unit::after{
+  content:'';position:absolute;top:3px;left:3px;right:3px;height:2px;
+  background:rgba(0,229,160,.3);box-shadow:0 4px 0 rgba(0,229,160,.3);
+}
+.ac-dali{background:#1f0d00;border-color:#402010}
+.ac-dali::after{background:rgba(255,107,53,.3);box-shadow:0 4px 0 rgba(255,107,53,.3)}
 
-    /* ── Menú ── */
-    .menu-row {
-      display: flex;
-      align-items: baseline;
-      gap: .5rem;
-      padding: .35rem 0;
-      border-bottom: 1px solid var(--border);
-    }
-    .menu-row:last-child { border-bottom: none; }
-    .menu-icon { font-size: .9rem; width: 1.2rem; flex-shrink: 0; }
-    .menu-text { flex: 1; font-size: .9rem; }
-    .menu-price {
-      font-size: 1rem;
-      font-weight: 700;
-      color: var(--verde);
-      white-space: nowrap;
-    }
-    .no-menu { color: var(--muted); font-size: .85rem; }
+/* Steam */
+.steam{
+  position:absolute;left:20px;top:-8px;
+  display:flex;gap:6px;
+}
+.steam-puff{
+  width:6px;height:18px;background:rgba(255,255,255,.12);
+  border-radius:50% 50% 20% 20%;
+  animation:rise 2s ease-in-out infinite;
+}
+.steam-puff:nth-child(2){animation-delay:.4s;height:14px}
+.steam-puff:nth-child(3){animation-delay:.8s;height:20px}
+@keyframes rise{
+  0%{transform:translateY(0) scaleX(1);opacity:.3}
+  50%{transform:translateY(-10px) scaleX(1.3);opacity:.15}
+  100%{transform:translateY(-18px) scaleX(.5);opacity:0}
+}
 
-    /* ── Ventas ── */
-    .sales-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: .5rem;
-    }
-    .sales-item {
-      background: rgba(255,255,255,.03);
-      border-radius: 8px;
-      padding: .6rem .75rem;
-    }
-    .sales-item .s-label { font-size: .7rem; color: var(--muted); }
-    .sales-item .s-value { font-size: 1.1rem; font-weight: 700; }
-    .sales-total {
-      grid-column: 1 / -1;
-      background: rgba(59,130,246,.1);
-      border-radius: 8px;
-      padding: .6rem .75rem;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-    }
-    .sales-total .s-label { font-size: .8rem; color: var(--azul); font-weight: 600; }
-    .sales-total .s-value { font-size: 1.3rem; font-weight: 800; color: var(--azul); }
+/* Building name */
+.bld-name{
+  font-size:1.1rem;font-weight:800;letter-spacing:.05em;
+  margin-bottom:.35rem;position:relative;
+}
+.bld-name-oasis{color:var(--oasis)}
+.bld-name-dali{color:var(--dali)}
 
-    /* ── Faltantes ── */
-    .shortage-list { list-style: none; }
-    .shortage-item {
-      display: flex;
-      align-items: center;
-      gap: .5rem;
-      padding: .4rem 0;
-      border-bottom: 1px solid var(--border);
-      font-size: .85rem;
-    }
-    .shortage-item:last-child { border-bottom: none; }
-    .shortage-item.bought { opacity: .5; text-decoration: line-through; }
-    .shortage-item .check { font-size: 1rem; }
-    .no-shortages { color: var(--verde); font-size: .85rem; }
+/* Status badge */
+.bld-badge{
+  display:inline-flex;align-items:center;gap:.3rem;
+  padding:.15rem .55rem;border-radius:999px;font-size:.6rem;
+  font-weight:700;letter-spacing:.08em;text-transform:uppercase;
+  margin-bottom:.6rem;
+}
+.badge-open{background:rgba(34,197,94,.15);color:var(--green)}
+.badge-low{background:rgba(245,158,11,.15);color:var(--warn)}
+.badge-zero{background:rgba(239,68,68,.15);color:var(--danger)}
 
-    /* ── Transferencias ── */
-    .transfer-item {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding: .4rem 0;
-      border-bottom: 1px solid var(--border);
-      font-size: .8rem;
-      flex-wrap: wrap;
-      gap: .25rem;
-    }
-    .transfer-item:last-child { border-bottom: none; }
-    .transfer-status {
-      padding: .15rem .5rem;
-      border-radius: 999px;
-      font-size: .65rem;
-      font-weight: 600;
-      text-transform: uppercase;
-    }
-    .status-requested { background: rgba(245,158,11,.2); color: var(--amarillo); }
-    .status-sent      { background: rgba(59,130,246,.2);  color: var(--azul); }
-    .status-received  { background: rgba(34,197,94,.2);   color: var(--verde); }
-    .no-transfers { color: var(--muted); font-size: .85rem; }
+/* Big quantity display */
+.bld-qty{
+  font-size:3.2rem;font-weight:900;line-height:1;
+  margin:.2rem 0;
+}
+.qty-green{color:var(--oasis)}
+.qty-warn{color:var(--warn)}
+.qty-red{color:var(--danger)}
+.bld-qty-label{font-size:.65rem;color:var(--muted);letter-spacing:.1em;text-transform:uppercase}
 
-    footer {
-      text-align: center;
-      padding: 1rem;
-      color: var(--muted);
-      font-size: .7rem;
-      border-top: 1px solid var(--border);
-    }
-  </style>
+/* Progress bar */
+.bld-bar{
+  width:100%;height:6px;background:rgba(255,255,255,.07);
+  border-radius:3px;margin:.6rem 0 .4rem;overflow:hidden;
+}
+.bld-bar-fill{height:100%;border-radius:3px;transition:width .8s ease}
+.bar-oasis{background:linear-gradient(90deg,var(--oasis-dim),var(--oasis))}
+.bar-dali{background:linear-gradient(90deg,var(--dali-dim),var(--dali))}
+.bar-warn{background:linear-gradient(90deg,#92400e,var(--warn))}
+.bar-danger{background:linear-gradient(90deg,#7f1d1d,var(--danger))}
+
+/* Footer stat strip */
+.bld-stats{
+  display:flex;justify-content:space-between;
+  font-size:.65rem;color:var(--muted);margin-top:.2rem;
+}
+
+/* Building body (wall/facade) */
+.facade{
+  width:100%;padding:.65rem 1.2rem;
+  display:flex;justify-content:space-between;align-items:center;
+}
+.facade-oasis{background:#07200f;border:1px solid #0d3d28;border-top:none}
+.facade-dali{background:#200c00;border:1px solid #3d1a00;border-top:none}
+
+.facade-windows{display:grid;grid-template-columns:repeat(4,1fr);gap:4px}
+.win{
+  width:14px;height:12px;border-radius:2px;
+  background:rgba(255,255,255,.06);
+}
+.win.lit-o{background:rgba(0,229,160,.35);box-shadow:0 0 4px rgba(0,229,160,.3)}
+.win.lit-d{background:rgba(255,107,53,.35);box-shadow:0 0 4px rgba(255,107,53,.3)}
+
+.facade-income{text-align:right}
+.facade-income-val{font-size:1rem;font-weight:700;color:var(--green)}
+.facade-income-lbl{font-size:.58rem;color:var(--muted);text-transform:uppercase;letter-spacing:.08em}
+
+/* Sidewalks */
+.sidewalk{
+  background:var(--sidewalk);
+  border-top:2px solid #1e3248;
+  padding:.5rem 1.2rem;
+  width:100%;display:flex;justify-content:center;align-items:center;
+  gap:.4rem;font-size:.65rem;color:var(--muted);
+}
+.enter-hint{
+  padding:.25rem .7rem;border-radius:4px;font-size:.62rem;font-weight:600;
+  letter-spacing:.06em;text-transform:uppercase;
+  transition:all .2s;
+}
+.hint-oasis{background:rgba(0,229,160,.1);color:var(--oasis);border:1px solid rgba(0,229,160,.2)}
+.hint-dali{background:rgba(255,107,53,.1);color:var(--dali);border:1px solid rgba(255,107,53,.2)}
+.building:hover .enter-hint{transform:scale(1.05)}
+
+/* ── Restaurant Detail Panel ─────────────────────────────────────── */
+#detail-panel{
+  display:none;position:fixed;inset:0;z-index:200;
+  background:rgba(4,10,20,.96);backdrop-filter:blur(16px);
+  overflow-y:auto;padding-top:56px;
+  animation:fadeIn .25s ease;
+}
+@keyframes fadeIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+
+.detail-inner{max-width:1100px;margin:0 auto;padding:1.25rem}
+
+/* Detail header */
+.detail-header{
+  display:flex;align-items:center;justify-content:space-between;
+  margin-bottom:1.25rem;flex-wrap:wrap;gap:.75rem;
+}
+.detail-name{font-size:1.8rem;font-weight:900;letter-spacing:.04em}
+.detail-name-oasis{color:var(--oasis)}
+.detail-name-dali{color:var(--dali)}
+.btn-back{
+  background:rgba(255,255,255,.05);border:1px solid var(--border);
+  color:var(--text);padding:.4rem 1rem;border-radius:6px;
+  font-size:.8rem;cursor:pointer;transition:all .2s;
+}
+.btn-back:hover{background:var(--card2)}
+
+/* Detail grid */
+.detail-grid{display:grid;grid-template-columns:1fr 1fr;gap:1rem}
+@media(max-width:680px){.detail-grid{grid-template-columns:1fr}}
+
+/* Cards */
+.d-card{
+  background:var(--card);border:1px solid var(--border);
+  border-radius:12px;padding:1.1rem;
+}
+.d-card-title{
+  font-size:.62rem;font-weight:700;letter-spacing:.12em;
+  text-transform:uppercase;color:var(--muted);margin-bottom:.85rem;
+}
+
+/* Almuerzo counter big */
+.counter-big{
+  display:flex;align-items:flex-end;gap:.5rem;margin-bottom:.5rem;
+}
+.counter-num{font-size:4.5rem;font-weight:900;line-height:1}
+.counter-of{font-size:1rem;color:var(--muted);padding-bottom:.8rem}
+
+/* Stat rows */
+.stat-row{
+  display:flex;justify-content:space-between;align-items:center;
+  padding:.4rem 0;border-bottom:1px solid rgba(255,255,255,.05);
+  font-size:.82rem;
+}
+.stat-row:last-child{border-bottom:none}
+.stat-val{font-weight:700;font-size:.9rem}
+
+/* Menu table */
+.menu-item{
+  display:flex;align-items:center;gap:.6rem;
+  padding:.4rem 0;border-bottom:1px solid rgba(255,255,255,.04);
+  font-size:.83rem;
+}
+.menu-item:last-child{border-bottom:none}
+.menu-icon{font-size:.95rem;width:1.4rem;flex-shrink:0}
+.menu-text{flex:1}
+.menu-price{font-weight:700;color:var(--green)}
+
+.menu-meta{
+  margin-top:.75rem;padding:.5rem .7rem;
+  background:rgba(255,255,255,.03);border-radius:6px;
+  font-size:.65rem;color:var(--muted);
+  display:flex;gap:.5rem;flex-wrap:wrap;align-items:center;
+}
+.meta-who{color:var(--blue)}
+.meta-when{color:var(--muted)}
+
+/* ── Almacén inventory grid ──────────────────────────────────────── */
+.inv-grid{display:flex;flex-direction:column;gap:.4rem}
+.inv-item{
+  display:flex;align-items:center;gap:.6rem;
+  padding:.45rem .65rem;border-radius:7px;
+  border:1px solid rgba(255,255,255,.05);
+  background:rgba(255,255,255,.02);
+  transition:background .15s;
+}
+.inv-item:hover{background:rgba(255,255,255,.05)}
+.inv-icon{font-size:1rem;flex-shrink:0}
+.inv-name{flex:1;font-size:.82rem}
+.inv-qty{font-size:.75rem;color:var(--muted);white-space:nowrap}
+.inv-meta{font-size:.58rem;color:var(--muted);white-space:nowrap;text-align:right;line-height:1.4}
+.inv-meta .by{color:var(--blue)}
+.inv-bought .inv-name{text-decoration:line-through;opacity:.45}
+.inv-bought .inv-icon::before{content:'✅ '}
+
+/* Full-width card */
+.d-card-full{grid-column:1/-1}
+
+/* Transfer items */
+.tx-item{
+  display:flex;justify-content:space-between;align-items:center;
+  padding:.45rem 0;border-bottom:1px solid rgba(255,255,255,.05);
+  font-size:.82rem;flex-wrap:wrap;gap:.3rem;
+}
+.tx-item:last-child{border-bottom:none}
+.tx-badge{
+  padding:.15rem .55rem;border-radius:999px;font-size:.6rem;
+  font-weight:700;text-transform:uppercase;letter-spacing:.06em;
+}
+.tx-req{background:rgba(245,158,11,.15);color:var(--warn)}
+.tx-sent{background:rgba(59,130,246,.15);color:var(--blue)}
+.tx-recv{background:rgba(34,197,94,.15);color:var(--green)}
+
+/* Sales chart bars */
+.sales-bars{display:grid;gap:.5rem}
+.sales-bar-row{display:flex;align-items:center;gap:.6rem;font-size:.75rem}
+.sales-bar-label{width:80px;flex-shrink:0;color:var(--muted)}
+.sales-bar-track{flex:1;height:12px;background:rgba(255,255,255,.06);border-radius:6px;overflow:hidden}
+.sales-bar-fill{height:100%;border-radius:6px;transition:width .8s}
+.sales-bar-val{width:70px;text-align:right;font-weight:700;flex-shrink:0}
+.fill-alm-o{background:linear-gradient(90deg,var(--oasis-dim),var(--oasis))}
+.fill-alm-d{background:linear-gradient(90deg,var(--dali-dim),var(--dali))}
+.fill-ext{background:linear-gradient(90deg,#1e40af,var(--blue))}
+.fill-ref{background:linear-gradient(90deg,#0e7490,#06b6d4)}
+.total-strip{
+  margin-top:.75rem;padding:.55rem .75rem;
+  background:rgba(59,130,246,.08);border:1px solid rgba(59,130,246,.15);
+  border-radius:8px;display:flex;justify-content:space-between;align-items:center;
+}
+.total-strip .lbl{font-size:.7rem;color:var(--blue);font-weight:600}
+.total-strip .val{font-size:1.25rem;font-weight:900;color:var(--blue)}
+
+/* ── Comparison Modal ────────────────────────────────────────────── */
+#cmp-modal{
+  display:none;position:fixed;inset:0;z-index:300;
+  background:rgba(4,10,20,.97);backdrop-filter:blur(20px);
+  overflow-y:auto;padding-top:56px;
+  animation:fadeIn .2s ease;
+}
+.cmp-inner{max-width:900px;margin:0 auto;padding:1.5rem}
+.cmp-header{
+  display:flex;align-items:center;justify-content:space-between;
+  margin-bottom:1.25rem;
+}
+.cmp-title{font-size:1.2rem;font-weight:800;color:var(--white)}
+.btn-close{
+  background:rgba(255,255,255,.05);border:1px solid var(--border);
+  color:var(--muted);width:34px;height:34px;border-radius:8px;
+  font-size:1.1rem;cursor:pointer;display:flex;align-items:center;justify-content:center;
+  transition:all .2s;
+}
+.btn-close:hover{background:var(--danger);color:#fff;border-color:var(--danger)}
+
+.cmp-grid{display:grid;grid-template-columns:1fr 1fr;gap:1rem}
+@media(max-width:600px){.cmp-grid{grid-template-columns:1fr}}
+
+.cmp-col{background:var(--card);border-radius:12px;overflow:hidden}
+.cmp-col-header{
+  padding:.75rem 1rem;font-size:1rem;font-weight:800;
+  display:flex;align-items:center;justify-content:space-between;
+}
+.cmp-col-oasis{background:linear-gradient(135deg,#0a2d1e,#0d3d28);color:var(--oasis);border-bottom:2px solid var(--oasis-dim)}
+.cmp-col-dali{background:linear-gradient(135deg,#2d180a,#3d2208);color:var(--dali);border-bottom:2px solid var(--dali-dim)}
+.cmp-meta{font-size:.6rem;color:var(--muted);font-weight:400;text-align:right;line-height:1.5}
+.cmp-meta .by{color:var(--blue)}
+
+.cmp-list{padding:.6rem .75rem;display:flex;flex-direction:column;gap:.35rem}
+.cmp-item{
+  display:flex;align-items:center;gap:.5rem;
+  padding:.4rem .5rem;border-radius:6px;font-size:.8rem;
+  background:rgba(255,255,255,.02);border:1px solid rgba(255,255,255,.04);
+}
+.cmp-item-pending{border-color:rgba(245,158,11,.2);background:rgba(245,158,11,.04)}
+.cmp-item-bought{opacity:.4}
+.cmp-item-icon{font-size:.85rem;flex-shrink:0}
+.cmp-item-name{flex:1}
+.cmp-item-qty{font-size:.72rem;color:var(--muted);white-space:nowrap}
+.cmp-item-who{font-size:.6rem;color:var(--blue);margin-top:.1rem}
+.cmp-item-body{flex:1}
+.cmp-no{padding:.75rem;text-align:center;color:var(--muted);font-size:.8rem}
+
+.cmp-summary{
+  grid-column:1/-1;background:var(--card);border-radius:12px;
+  padding:1rem;display:grid;grid-template-columns:1fr 1fr;gap:.75rem;
+}
+.cmp-sum-col{text-align:center}
+.cmp-sum-num{font-size:2rem;font-weight:900}
+.cmp-sum-num-o{color:var(--oasis)}
+.cmp-sum-num-d{color:var(--dali)}
+.cmp-sum-lbl{font-size:.65rem;color:var(--muted);text-transform:uppercase;letter-spacing:.08em}
+.cmp-sum-diff{
+  grid-column:1/-1;text-align:center;font-size:.75rem;
+  padding:.5rem;background:rgba(255,255,255,.03);border-radius:8px;
+  color:var(--muted);
+}
+
+/* ── Tooltips / pulse on new data ────────────────────────────────── */
+.pulse{animation:pulseAnim .6s ease}
+@keyframes pulseAnim{
+  0%{opacity:1}25%{opacity:.4}50%{opacity:1}75%{opacity:.6}100%{opacity:1}
+}
+</style>
 </head>
 <body>
 
-<header>
-  <h1>🍽 Panel Restaurantes — Oasis &amp; Dali</h1>
-  <div style="display:flex;gap:1rem;align-items:center;flex-wrap:wrap;">
-    <span class="timestamp">Actualizado: <span id="ts">{{ now }}</span></span>
-    <div class="refresh-bar"><div class="dot"></div> Auto-refresh cada 30 s</div>
+<!-- ── HUD Bar ─────────────────────────────────────────────────── -->
+<div id="hud-bar">
+  <div class="hud-title">🍽 <span>Oasis</span> & Dali — Panel de Control</div>
+  <div class="hud-right">
+    <div class="live-dot"></div>
+    <span class="hud-ts" id="ts-bar">Actualizado: {{ now }}</span>
+    <button class="btn-compare" onclick="openCompare()">⚖ Comparar Almacenes</button>
   </div>
-</header>
+</div>
 
-<main id="main-content">
-  {% for rest in [oasis, dali] %}
-  {% if rest %}
-  <div class="restaurant-col" id="col-{{ rest.name }}">
+<!-- ── City View ──────────────────────────────────────────────── -->
+<div id="city">
+  <p class="city-label">▼ Vista del distrito — haz clic para entrar</p>
 
-    <!-- Estado principal + contador -->
-    <div class="card">
-      <div class="rest-header">
-        <span class="rest-name">{{ rest.label }}</span>
-        {% if rest.estado == 'ABIERTO' %}
-          <span class="badge badge-green">Abierto</span>
-        {% elif rest.estado == 'POCAS_UNIDADES' %}
-          <span class="badge badge-yellow">⚠ Pocas unidades</span>
-        {% else %}
-          <span class="badge badge-red">Sin almuerzos</span>
-        {% endif %}
-      </div>
+  <div class="city-scene">
 
-      <div class="qty-display">
-        <div class="qty-number {% if rest.qty == 0 %}red{% elif rest.qty <= 5 %}yellow{% else %}green{% endif %}">
-          {{ rest.qty }}
+    <!-- OASIS building -->
+    <div class="building" id="bld-oasis" onclick="openDetail('oasis')">
+      <div class="roof roof-oasis">
+        <div class="steam">
+          <div class="steam-puff"></div><div class="steam-puff"></div><div class="steam-puff"></div>
         </div>
-        <div class="qty-label">almuerzos disponibles</div>
-      </div>
-    </div>
-
-    <!-- Menú del día -->
-    <div class="card">
-      <div class="card-title">Menú del día</div>
-      {% if rest.menu %}
-        <div class="menu-row">
-          <span class="menu-icon">🍲</span>
-          <span class="menu-text">{{ rest.menu.soup or '—' }}</span>
+        <div class="ac-unit"></div>
+        <div class="bld-name bld-name-oasis">🌴 OASIS</div>
+        <div id="badge-oasis" class="bld-badge badge-open">● ABIERTO</div>
+        <div class="counter-big">
+          <span id="qty-oasis" class="bld-qty qty-green">{{ oasis.qty }}</span>
+          <span class="bld-qty-label">almuerzos</span>
         </div>
-        <div class="menu-row">
-          <span class="menu-icon">🍽</span>
-          <span class="menu-text">{{ rest.menu.main_dish or '—' }}</span>
+        <div class="bld-bar">
+          <div id="bar-oasis" class="bld-bar-fill bar-oasis"
+               style="width:{{ (oasis.qty / oasis.menu.initial * 100)|round if oasis.menu and oasis.menu.initial else 0 }}%"></div>
         </div>
-        <div class="menu-row">
-          <span class="menu-icon">🥤</span>
-          <span class="menu-text">{{ rest.menu.drink or '—' }}</span>
-        </div>
-        <div class="menu-row" style="margin-top:.5rem;">
-          <span class="menu-icon">💰</span>
-          <span class="menu-text">Precio almuerzo</span>
-          <span class="menu-price">${{ "%.2f"|format(rest.menu.price) }}</span>
-        </div>
-      {% else %}
-        <p class="no-menu">❌ Menú no definido para hoy.</p>
-      {% endif %}
-    </div>
-
-    <!-- Ventas del día -->
-    <div class="card">
-      <div class="card-title">Ventas de hoy</div>
-      <div class="sales-grid">
-        <div class="sales-item">
-          <div class="s-label">🍽 Almuerzos</div>
-          <div class="s-value">{{ rest.sales.almuerzos }}</div>
-        </div>
-        <div class="sales-item">
-          <div class="s-label">💵 Ingresos</div>
-          <div class="s-value">${{ "%.2f"|format(rest.sales.almuerzos_total) }}</div>
-        </div>
-        <div class="sales-item">
-          <div class="s-label">🍴 Extras</div>
-          <div class="s-value">{{ rest.sales.extras }}</div>
-        </div>
-        <div class="sales-item">
-          <div class="s-label">🥤 Refrescos</div>
-          <div class="s-value">{{ rest.sales.refrescos }}</div>
-        </div>
-        <div class="sales-total">
-          <span class="s-label">Total del día</span>
-          <span class="s-value">${{ "%.2f"|format(rest.sales.total) }}</span>
+        <div class="bld-stats">
+          <span id="oasis-sold">Vendidos: {{ oasis.sales.almuerzos }}</span>
+          <span id="oasis-init">Cap: {{ oasis.menu.initial if oasis.menu else '—' }}</span>
         </div>
       </div>
-    </div>
-
-    <!-- Faltantes -->
-    <div class="card">
-      <div class="card-title">Lista de faltantes</div>
-      {% if rest.shortages %}
-        <ul class="shortage-list">
-          {% for s in rest.shortages %}
-          <li class="shortage-item {% if s.status == 'bought' %}bought{% endif %}">
-            <span class="check">{% if s.status == 'bought' %}✅{% else %}🛒{% endif %}</span>
-            <span style="flex:1">{{ s.item_name }}</span>
-            <span style="color:var(--muted)">{{ s.quantity_needed }}</span>
-          </li>
+      <div class="facade facade-oasis">
+        <div class="facade-windows">
+          {% for i in range(8) %}
+          <div class="win {% if i < 5 %}lit-o{% endif %}"></div>
           {% endfor %}
-        </ul>
-      {% else %}
-        <p class="no-shortages">✅ Sin faltantes pendientes.</p>
-      {% endif %}
-    </div>
-
-    <!-- Transferencias del día -->
-    <div class="card">
-      <div class="card-title">Transferencias de hoy</div>
-      {% if rest.transfers %}
-        {% for t in rest.transfers %}
-        <div class="transfer-item">
-          <span>
-            {{ t.from | capitalize }} → {{ t.to | capitalize }}
-            <strong>×{{ t.quantity }}</strong>
-          </span>
-          <span class="transfer-status status-{{ t.status }}">
-            {% if t.status == 'requested' %}Solicitado
-            {% elif t.status == 'sent' %}En camino
-            {% else %}Recibido{% endif %}
-          </span>
         </div>
-        {% endfor %}
-      {% else %}
-        <p class="no-transfers">Sin transferencias hoy.</p>
-      {% endif %}
+        <div class="facade-income">
+          <div id="oasis-income" class="facade-income-val">${{ "%.0f"|format(oasis.sales.total) }}</div>
+          <div class="facade-income-lbl">ingresos hoy</div>
+        </div>
+      </div>
+      <div class="sidewalk">
+        <span class="enter-hint hint-oasis">↵ Entrar</span>
+      </div>
     </div>
 
-  </div>
-  {% endif %}
-  {% endfor %}
-</main>
+    <!-- Road -->
+    <div class="road">
+      <div class="car"></div>
+    </div>
 
-<footer>
-  Panel en tiempo real — Restaurantes Oasis &amp; Dali &nbsp;|&nbsp; Auto-refresh 30 s
-</footer>
+    <!-- DALI building -->
+    <div class="building" id="bld-dali" onclick="openDetail('dali')">
+      <div class="roof roof-dali">
+        <div class="steam">
+          <div class="steam-puff"></div><div class="steam-puff"></div><div class="steam-puff"></div>
+        </div>
+        <div class="ac-unit ac-dali"></div>
+        <div class="bld-name bld-name-dali">🎨 DALI</div>
+        <div id="badge-dali" class="bld-badge badge-low">⚠ POCAS UNIDADES</div>
+        <div class="counter-big">
+          <span id="qty-dali" class="bld-qty qty-warn">{{ dali.qty }}</span>
+          <span class="bld-qty-label">almuerzos</span>
+        </div>
+        <div class="bld-bar">
+          <div id="bar-dali" class="bld-bar-fill bar-dali"
+               style="width:{{ (dali.qty / dali.menu.initial * 100)|round if dali.menu and dali.menu.initial else 0 }}%"></div>
+        </div>
+        <div class="bld-stats">
+          <span id="dali-sold">Vendidos: {{ dali.sales.almuerzos }}</span>
+          <span id="dali-init">Cap: {{ dali.menu.initial if dali.menu else '—' }}</span>
+        </div>
+      </div>
+      <div class="facade facade-dali">
+        <div class="facade-windows">
+          {% for i in range(8) %}
+          <div class="win {% if i < 3 %}lit-d{% endif %}"></div>
+          {% endfor %}
+        </div>
+        <div class="facade-income">
+          <div id="dali-income" class="facade-income-val">${{ "%.0f"|format(dali.sales.total) }}</div>
+          <div class="facade-income-lbl">ingresos hoy</div>
+        </div>
+      </div>
+      <div class="sidewalk">
+        <span class="enter-hint hint-dali">↵ Entrar</span>
+      </div>
+    </div>
+
+  </div><!-- city-scene -->
+</div><!-- city -->
+
+<!-- ── Detail Panel ───────────────────────────────────────────── -->
+<div id="detail-panel">
+  <div class="detail-inner">
+    <div class="detail-header">
+      <div id="detail-title" class="detail-name detail-name-oasis">🌴 OASIS</div>
+      <div style="display:flex;align-items:center;gap:.6rem;flex-wrap:wrap">
+        <div id="detail-badge" class="bld-badge badge-open">● ABIERTO</div>
+        <button class="btn-back" onclick="closeDetail()">← Volver al mapa</button>
+      </div>
+    </div>
+
+    <div class="detail-grid">
+
+      <!-- Almuerzos -->
+      <div class="d-card">
+        <div class="d-card-title">🍽 Almuerzos disponibles</div>
+        <div class="counter-big">
+          <span id="d-qty" class="counter-num" style="color:var(--oasis)">—</span>
+          <span id="d-of" class="counter-of">/ — cap.</span>
+        </div>
+        <div class="bld-bar" style="margin:.4rem 0">
+          <div id="d-bar" class="bld-bar-fill bar-oasis" style="width:0%"></div>
+        </div>
+        <div class="stat-row"><span>Vendidos hoy</span><span id="d-sold" class="stat-val">—</span></div>
+        <div class="stat-row"><span>Precio almuerzo</span><span id="d-price" class="stat-val">—</span></div>
+        <div class="stat-row"><span>Estado</span><span id="d-estado" class="stat-val">—</span></div>
+      </div>
+
+      <!-- Menú -->
+      <div class="d-card">
+        <div class="d-card-title">📋 Menú del día</div>
+        <div id="d-menu-body">
+          <div class="menu-item"><span class="menu-icon">🍲</span><span id="d-soup" class="menu-text">—</span></div>
+          <div class="menu-item"><span class="menu-icon">🍽</span><span id="d-main" class="menu-text">—</span></div>
+          <div class="menu-item"><span class="menu-icon">🥤</span><span id="d-drink" class="menu-text">—</span></div>
+          <div class="menu-item">
+            <span class="menu-icon">💰</span>
+            <span class="menu-text">Precio</span>
+            <span id="d-mprice" class="menu-price">—</span>
+          </div>
+        </div>
+        <div class="menu-meta">
+          <span>Definido por:</span>
+          <span id="d-menu-by" class="meta-who">—</span>
+          <span id="d-menu-at" class="meta-when">—</span>
+        </div>
+      </div>
+
+      <!-- Ventas detalladas -->
+      <div class="d-card">
+        <div class="d-card-title">💵 Ventas del día</div>
+        <div class="sales-bars">
+          <div class="sales-bar-row">
+            <span class="sales-bar-label">Almuerzos</span>
+            <div class="sales-bar-track"><div id="d-bar-alm" class="sales-bar-fill fill-alm-o" style="width:0%"></div></div>
+            <span id="d-val-alm" class="sales-bar-val">—</span>
+          </div>
+          <div class="sales-bar-row">
+            <span class="sales-bar-label">Extras</span>
+            <div class="sales-bar-track"><div id="d-bar-ext" class="sales-bar-fill fill-ext" style="width:0%"></div></div>
+            <span id="d-val-ext" class="sales-bar-val">—</span>
+          </div>
+          <div class="sales-bar-row">
+            <span class="sales-bar-label">Refrescos</span>
+            <div class="sales-bar-track"><div id="d-bar-ref" class="sales-bar-fill fill-ref" style="width:0%"></div></div>
+            <span id="d-val-ref" class="sales-bar-val">—</span>
+          </div>
+        </div>
+        <div class="total-strip">
+          <span class="lbl">Total del día</span>
+          <span id="d-total" class="val">—</span>
+        </div>
+      </div>
+
+      <!-- Almacén / Faltantes -->
+      <div class="d-card">
+        <div class="d-card-title">🏪 Almacén — Lista de faltantes</div>
+        <div id="d-inv" class="inv-grid">
+          <div style="color:var(--muted);font-size:.8rem">Cargando...</div>
+        </div>
+      </div>
+
+      <!-- Transferencias -->
+      <div class="d-card d-card-full">
+        <div class="d-card-title">🚕 Transferencias del día</div>
+        <div id="d-transfers">
+          <div style="color:var(--muted);font-size:.8rem">Sin transferencias hoy.</div>
+        </div>
+      </div>
+
+    </div><!-- detail-grid -->
+  </div><!-- detail-inner -->
+</div><!-- detail-panel -->
+
+<!-- ── Comparison Modal ───────────────────────────────────────── -->
+<div id="cmp-modal">
+  <div class="cmp-inner">
+    <div class="cmp-header">
+      <div class="cmp-title">⚖ Comparar Almacenes — Oasis vs Dali</div>
+      <button class="btn-close" onclick="closeCompare()">✕</button>
+    </div>
+    <div class="cmp-grid" id="cmp-grid">
+      <!-- JS fills this -->
+    </div>
+  </div>
+</div>
 
 <script>
-  // Auto-refresh via API cada 30 segundos
-  const STATUS_LABELS = {
-    ABIERTO:        '<span class="badge badge-green">Abierto</span>',
-    POCAS_UNIDADES: '<span class="badge badge-yellow">⚠ Pocas unidades</span>',
-    SIN_ALMUERZOS:  '<span class="badge badge-red">Sin almuerzos</span>',
-  };
+// ── State ──────────────────────────────────────────────────────────
+let STATE = {
+  oasis: {{ oasis|tojson }},
+  dali:  {{ dali|tojson }}
+};
+let currentRest = null;
 
-  function qtyClass(qty) {
-    if (qty === 0) return 'red';
-    if (qty <= 5)  return 'yellow';
-    return 'green';
+// ── Utilities ───────────────────────────────────────────────────────
+function qtyClass(qty){
+  if(qty===0)return'qty-red';
+  if(qty<=5)return'qty-warn';
+  return'qty-green';
+}
+function barClass(name,qty){
+  if(qty===0)return'bar-danger';
+  if(qty<=5)return'bar-warn';
+  return name==='oasis'?'bar-oasis':'bar-dali';
+}
+function badgeClass(estado){
+  if(estado==='ABIERTO')return'badge-open';
+  if(estado==='POCAS_UNIDADES')return'badge-low';
+  return'badge-zero';
+}
+function badgeLabel(estado){
+  if(estado==='ABIERTO')return'● ABIERTO';
+  if(estado==='POCAS_UNIDADES')return'⚠ POCAS UNIDADES';
+  return'✕ SIN ALMUERZOS';
+}
+function fmtTime(ts){
+  if(!ts||ts==='—')return'—';
+  try{
+    const d=new Date(ts.replace(' ','T'));
+    return d.toLocaleString('es',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'});
+  }catch{return ts}
+}
+function pct(a,b){return b>0?Math.min(100,Math.round(a/b*100)):0}
+
+// ── City map update ─────────────────────────────────────────────────
+function updateCityBuilding(name, r){
+  const qEl=document.getElementById('qty-'+name);
+  const bEl=document.getElementById('bar-'+name);
+  const badgeEl=document.getElementById('badge-'+name);
+  const soldEl=document.getElementById(name+'-sold');
+  const incomeEl=document.getElementById(name+'-income');
+
+  qEl.textContent=r.qty;
+  qEl.className='bld-qty '+qtyClass(r.qty);
+  qEl.classList.add('pulse');
+  setTimeout(()=>qEl.classList.remove('pulse'),700);
+
+  const init=r.menu?.initial||60;
+  bEl.style.width=pct(r.qty,init)+'%';
+  bEl.className='bld-bar-fill '+barClass(name,r.qty);
+
+  badgeEl.className='bld-badge '+badgeClass(r.estado);
+  badgeEl.textContent=badgeLabel(r.estado);
+  soldEl.textContent='Vendidos: '+r.sales.almuerzos;
+  incomeEl.textContent='$'+r.sales.total.toFixed(0);
+}
+
+// ── Open restaurant detail ───────────────────────────────────────────
+function openDetail(name){
+  currentRest=name;
+  const r=STATE[name];
+  const panel=document.getElementById('detail-panel');
+  panel.style.display='block';
+  panel.scrollTop=0;
+
+  // Header
+  const title=document.getElementById('detail-title');
+  title.textContent=(name==='oasis'?'🌴 OASIS':'🎨 DALI');
+  title.className='detail-name '+(name==='oasis'?'detail-name-oasis':'detail-name-dali');
+  const db=document.getElementById('detail-badge');
+  db.className='bld-badge '+badgeClass(r.estado);
+  db.textContent=badgeLabel(r.estado);
+
+  fillDetail(r, name);
+}
+
+function closeDetail(){
+  document.getElementById('detail-panel').style.display='none';
+  currentRest=null;
+}
+
+function fillDetail(r, name){
+  const accentClass=name==='oasis'?'bar-oasis':'bar-dali';
+  const fillAlm=name==='oasis'?'fill-alm-o':'fill-alm-d';
+
+  // Almuerzos
+  const init=r.menu?.initial||60;
+  document.getElementById('d-qty').textContent=r.qty;
+  document.getElementById('d-qty').style.color=name==='oasis'?'var(--oasis)':'var(--dali)';
+  document.getElementById('d-of').textContent='/ '+init+' cap.';
+  document.getElementById('d-bar').style.width=pct(r.qty,init)+'%';
+  document.getElementById('d-bar').className='bld-bar-fill '+barClass(name,r.qty);
+  document.getElementById('d-sold').textContent=r.sales.almuerzos+' almuerzos';
+  document.getElementById('d-price').textContent=r.menu?'$'+r.menu.price.toFixed(2):'—';
+  document.getElementById('d-estado').textContent=badgeLabel(r.estado);
+
+  // Menú
+  document.getElementById('d-soup').textContent=r.menu?.soup||'No definido';
+  document.getElementById('d-main').textContent=r.menu?.main_dish||'No definido';
+  document.getElementById('d-drink').textContent=r.menu?.drink||'No definido';
+  document.getElementById('d-mprice').textContent=r.menu?'$'+r.menu.price.toFixed(2):'—';
+  document.getElementById('d-menu-by').textContent=r.menu?.updated_by||'—';
+  document.getElementById('d-menu-at').textContent=fmtTime(r.menu?.updated_at);
+
+  // Ventas
+  const maxSales=Math.max(r.sales.almuerzos_total,1);
+  document.getElementById('d-bar-alm').className='sales-bar-fill '+fillAlm;
+  document.getElementById('d-bar-alm').style.width=pct(r.sales.almuerzos_total,maxSales)+'%';
+  document.getElementById('d-val-alm').textContent='$'+r.sales.almuerzos_total.toFixed(0);
+  document.getElementById('d-bar-ext').style.width=pct(r.sales.extras_total,maxSales)+'%';
+  document.getElementById('d-val-ext').textContent='$'+r.sales.extras_total.toFixed(0);
+  document.getElementById('d-bar-ref').style.width=pct(r.sales.refrescos_total,maxSales)+'%';
+  document.getElementById('d-val-ref').textContent='$'+r.sales.refrescos_total.toFixed(0);
+  document.getElementById('d-total').textContent='$'+r.sales.total.toFixed(2);
+
+  // Almacén / faltantes
+  const inv=document.getElementById('d-inv');
+  if(!r.shortages||r.shortages.length===0){
+    inv.innerHTML='<div style="color:var(--green);font-size:.82rem;padding:.5rem 0">✅ Sin faltantes pendientes.</div>';
+  }else{
+    inv.innerHTML=r.shortages.map(s=>{
+      const bought=s.status==='bought';
+      return`<div class="inv-item${bought?' inv-bought':''}">
+        <span class="inv-icon">${bought?'':'🛒'}</span>
+        <div style="flex:1">
+          <div class="inv-name">${s.item_name}</div>
+          <div class="inv-meta by">${s.updated_by||'—'} · <span class="meta-when">${fmtTime(s.updated_at)}</span></div>
+        </div>
+        <span class="inv-qty">${s.quantity_needed}</span>
+      </div>`;
+    }).join('');
   }
 
-  function transferLabel(s) {
-    return s === 'requested' ? 'Solicitado' : s === 'sent' ? 'En camino' : 'Recibido';
+  // Transferencias
+  const txEl=document.getElementById('d-transfers');
+  if(!r.transfers||r.transfers.length===0){
+    txEl.innerHTML='<div style="color:var(--muted);font-size:.8rem">Sin transferencias hoy.</div>';
+  }else{
+    const statusMap={'requested':['tx-req','Solicitado'],'sent':['tx-sent','En camino'],'received':['tx-recv','Recibido']};
+    txEl.innerHTML=r.transfers.map(t=>{
+      const[cls,lbl]=statusMap[t.status]||['tx-req',t.status];
+      return`<div class="tx-item">
+        <span>🚕 ${t.from} → ${t.to} <strong>×${t.quantity}</strong></span>
+        <span class="tx-badge ${cls}">${lbl}</span>
+      </div>`;
+    }).join('');
   }
+}
 
-  async function refresh() {
-    try {
-      const res  = await fetch('/api/status');
-      const data = await res.json();
+// ── Comparison ──────────────────────────────────────────────────────
+function openCompare(){
+  document.getElementById('cmp-modal').style.display='block';
+  renderCompare();
+}
+function closeCompare(){
+  document.getElementById('cmp-modal').style.display='none';
+}
 
-      for (const name of ['oasis', 'dali']) {
-        const r = data[name];
-        if (!r) continue;
+function renderCompare(){
+  const o=STATE.oasis, d=STATE.dali;
 
-        // Contador
-        const qtyEl = document.querySelector(`#col-${name} .qty-number`);
-        if (qtyEl) {
-          qtyEl.textContent = r.qty;
-          qtyEl.className = `qty-number ${qtyClass(r.qty)}`;
+  const oLatest=latestShortageTime(o.shortages);
+  const dLatest=latestShortageTime(d.shortages);
+  const oPending=(o.shortages||[]).filter(s=>s.status==='pending').length;
+  const dPending=(d.shortages||[]).filter(s=>s.status==='pending').length;
+
+  const g=document.getElementById('cmp-grid');
+  g.innerHTML=`
+    <div class="cmp-col">
+      <div class="cmp-col-header cmp-col-oasis">
+        <span>🌴 Oasis</span>
+        <div class="cmp-meta">
+          Última act.: <strong>${fmtTime(oLatest.time)}</strong><br>
+          Por: <span class="by">${oLatest.by}</span>
+        </div>
+      </div>
+      <div class="cmp-list">${renderCmpItems(o.shortages)}</div>
+    </div>
+
+    <div class="cmp-col">
+      <div class="cmp-col-header cmp-col-dali">
+        <span>🎨 Dali</span>
+        <div class="cmp-meta">
+          Última act.: <strong>${fmtTime(dLatest.time)}</strong><br>
+          Por: <span class="by">${dLatest.by}</span>
+        </div>
+      </div>
+      <div class="cmp-list">${renderCmpItems(d.shortages)}</div>
+    </div>
+
+    <div class="cmp-summary">
+      <div class="cmp-sum-col">
+        <div class="cmp-sum-num cmp-sum-num-o">${oPending}</div>
+        <div class="cmp-sum-lbl">Oasis — pendientes</div>
+      </div>
+      <div class="cmp-sum-col">
+        <div class="cmp-sum-num cmp-sum-num-d">${dPending}</div>
+        <div class="cmp-sum-lbl">Dali — pendientes</div>
+      </div>
+      <div class="cmp-sum-diff">
+        ${oPending===0&&dPending===0
+          ? '✅ Ambos restaurantes sin faltantes pendientes'
+          : oPending>dPending
+            ? `⚠ Oasis tiene ${oPending-dPending} faltante(s) más que Dali`
+            : oPending<dPending
+              ? `⚠ Dali tiene ${dPending-oPending} faltante(s) más que Oasis`
+              : `Ambos tienen el mismo número de faltantes (${oPending})`
         }
+      </div>
+    </div>`;
+}
 
-        // Badge
-        const badgeEl = document.querySelector(`#col-${name} .rest-header .badge`);
-        if (badgeEl) {
-          badgeEl.outerHTML = STATUS_LABELS[r.estado] || '';
-        }
+function renderCmpItems(items){
+  if(!items||items.length===0)return'<div class="cmp-no">Sin faltantes registrados hoy.</div>';
+  return items.map(s=>{
+    const bought=s.status==='bought';
+    return`<div class="cmp-item ${bought?'cmp-item-bought':'cmp-item-pending'}">
+      <span class="cmp-item-icon">${bought?'✅':'🛒'}</span>
+      <div class="cmp-item-body">
+        <div class="cmp-item-name">${s.item_name}</div>
+        <div class="cmp-item-who">${s.updated_by||'—'} · ${fmtTime(s.updated_at)}</div>
+      </div>
+      <span class="cmp-item-qty">${s.quantity_needed}</span>
+    </div>`;
+  }).join('');
+}
 
-        // Ventas totales (solo el total para no reescribir todo)
-        const totalEls = document.querySelectorAll(`#col-${name} .sales-total .s-value`);
-        if (totalEls.length) totalEls[0].textContent = '$' + r.sales.total.toFixed(2);
-      }
+function latestShortageTime(items){
+  if(!items||items.length===0)return{time:'—',by:'—'};
+  let latest=null,by='—';
+  for(const s of items){
+    if(!s.updated_at)continue;
+    if(!latest||s.updated_at>latest){latest=s.updated_at;by=s.updated_by||'—';}
+  }
+  return{time:latest||'—',by};
+}
 
-      document.getElementById('ts').textContent =
-        new Date(data.timestamp).toLocaleString('es', {
-          day: '2-digit', month: '2-digit', year: 'numeric',
-          hour: '2-digit', minute: '2-digit'
-        });
-    } catch (e) {
-      console.warn('Auto-refresh error:', e);
+// ── Auto-refresh ─────────────────────────────────────────────────────
+async function refresh(){
+  try{
+    const res=await fetch('/api/status');
+    const data=await res.json();
+    STATE={oasis:data.oasis,dali:data.dali};
+
+    updateCityBuilding('oasis',data.oasis);
+    updateCityBuilding('dali',data.dali);
+
+    if(currentRest){
+      fillDetail(STATE[currentRest],currentRest);
+      const db=document.getElementById('detail-badge');
+      db.className='bld-badge '+badgeClass(STATE[currentRest].estado);
+      db.textContent=badgeLabel(STATE[currentRest].estado);
     }
-  }
 
-  setInterval(refresh, 30000);
+    const ts=new Date(data.timestamp);
+    document.getElementById('ts-bar').textContent=
+      'Actualizado: '+ts.toLocaleString('es',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'});
+  }catch(e){console.warn('Refresh error:',e)}
+}
+
+// Init
+updateCityBuilding('oasis', STATE.oasis);
+updateCityBuilding('dali',  STATE.dali);
+setInterval(refresh, 15000);
 </script>
-
 </body>
 </html>
