@@ -1,9 +1,12 @@
-from flask import Flask, render_template, jsonify
+import os
+from flask import Flask, render_template, jsonify, send_from_directory, abort
 import database as db
 import config
 from datetime import datetime
 from handlers.refrescos import sugerir_refresco
 from handlers.social import get_latest_posts_summary
+
+COMPROBANTES_DIR = os.getenv("COMPROBANTES_DIR", "comprobantes")
 
 app = Flask(__name__)
 
@@ -108,6 +111,24 @@ def api_status():
         "social_posts": get_latest_posts_summary(),
         "timestamp":    datetime.now().isoformat(),
     })
+
+
+@app.route("/api/payments")
+def api_payments():
+    oasis = db.get_restaurant("oasis")
+    dali  = db.get_restaurant("dali")
+    return jsonify({
+        "oasis": [dict(p) for p in db.get_payments(oasis["id"])],
+        "dali":  [dict(p) for p in db.get_payments(dali["id"])],
+    })
+
+
+@app.route("/comprobantes/<path:filename>")
+def serve_comprobante(filename):
+    safe = os.path.basename(filename)
+    if not safe.endswith(".jpg"):
+        abort(404)
+    return send_from_directory(os.path.abspath(COMPROBANTES_DIR), safe)
 
 
 @app.route("/health")

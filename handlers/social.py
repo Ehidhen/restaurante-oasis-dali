@@ -1,6 +1,7 @@
 """
 Monitor de la página pública de Facebook del restaurante.
-Usa mbasic.facebook.com (versión HTML ligera) para detectar nuevas publicaciones.
+Usa mbasic.facebook.com (versión HTML ligera) para detectar nuevas publicaciones
+y extraer automáticamente el menú del día (sopa + segundo + bebida).
 """
 import hashlib
 import logging
@@ -34,6 +35,63 @@ PROMO_KEYWORDS = [
     "precio", "bs", "alitas", "frappe", "jugo", "lunes", "martes",
     "miercoles", "jueves", "viernes", "sábado", "domingo"
 ]
+
+# ── Detección de menú del día ────────────────────────────────────────────────
+
+MENU_TRIGGERS = [
+    "menú del día", "menu del dia", "menú de hoy", "menu de hoy",
+    "almuerzo del día", "almuerzo de hoy", "plato del día", "plato de hoy",
+    "hoy tenemos", "hoy les ofrecemos",
+]
+
+_SOUP_KW    = ["sopa", "crema", "consomé", "caldo", "soup", "🍲", "🥣"]
+_MAIN_KW    = ["segundo", "plato", "2do", "principal", "🍽", "🍛", "🥩", "🍖", "🍗"]
+_DRINK_KW   = ["refresco", "bebida", "jugo", "limonada", "agua", "frappe", "drink", "🥤", "🍹"]
+
+
+def _extract_line_value(text: str, keywords: list) -> str:
+    """Busca la primera línea que contiene una keyword y extrae el valor."""
+    for line in text.split("\n"):
+        line_s = line.strip()
+        line_low = line_s.lower()
+        for kw in keywords:
+            if kw.lower() in line_low:
+                # Remove the keyword + separator (:, -, –, emoji at start)
+                val = re.sub(
+                    rf"(?i){re.escape(kw)}\s*[:\-–—]?\s*", "", line_s, count=1
+                ).strip()
+                # Strip leading emojis/symbols
+                val = re.sub(
+                    r'^[\U0001F300-\U0001FFFF\U00002600-\U000027BF\s\-:]+', "", val
+                ).strip()
+                if val and len(val) > 3:
+                    return val[:120]
+    return ""
+
+
+def detect_menu(text: str) -> dict | None:
+    """
+    Returns {soup, main_dish, drink} if the post looks like a daily menu,
+    or None if it doesn't seem to be a menu post.
+    """
+    text_low = text.lower()
+
+    # Must have at least one menu trigger OR both a soup+main keyword
+    has_trigger = any(t in text_low for t in MENU_TRIGGERS)
+    has_soup    = any(k.lower() in text_low for k in _SOUP_KW if k.isascii() or k in text)
+    has_main    = any(k.lower() in text_low for k in _MAIN_KW if k.isascii() or k in text)
+
+    if not has_trigger and not (has_soup and has_main):
+        return None
+
+    soup      = _extract_line_value(text, _SOUP_KW)
+    main_dish = _extract_line_value(text, _MAIN_KW)
+    drink     = _extract_line_value(text, _DRINK_KW)
+
+    if not soup and not main_dish:
+        return None
+
+    return {"soup": soup, "main_dish": main_dish, "drink": drink}
 
 
 def _is_promo(text: str) -> bool:
@@ -165,6 +223,29 @@ async def job_monitor_facebook(ctx: ContextTypes.DEFAULT_TYPE):
             db.add_promo(oasis["id"], content_short, p["price"],
                          source="facebook", image_url=p["image_url"])
             msg += f"\n\n✅ _Registrada automáticamente como promo_"
+
+        # Auto-actualizar menú si detectamos sopa + segundo
+        menu_data = detect_menu(p["content"])
+        if menu_data:
+            for rest_name in ["oasis", "dali"]:
+                rest = db.get_restaurant(rest_name)
+                db.update_menu_dishes(
+                    rest["id"],
+                    soup=menu_data["soup"],
+                    main_dish=menu_data["main_dish"],
+                    drink=menu_data["drink"],
+                    updated_by="Facebook Auto",
+                )
+            soup_str = menu_data["soup"] or "—"
+            main_str = menu_data["main_dish"] or "—"
+            drink_str = menu_data["drink"] or "—"
+            msg += (
+                f"\n\n🍲 *Menú detectado y actualizado automáticamente*\n"
+                f"Sopa: {soup_str}\n"
+                f"Segundo: {main_str}\n"
+                f"Bebida: {drink_str}\n"
+                f"_(El precio lo registra caja con /precio)_"
+            )
 
         all_ids = (
             config.ADMIN_IDS |

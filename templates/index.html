@@ -440,6 +440,79 @@ body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,san
 @keyframes pulseAnim{
   0%{opacity:1}25%{opacity:.4}50%{opacity:1}75%{opacity:.6}100%{opacity:1}
 }
+
+/* ── CAJA panel ──────────────────────────────────────────────────── */
+.btn-caja{
+  background:linear-gradient(135deg,#1a2e1a,#0f2010);
+  border:1px solid var(--oasis-dim);color:var(--oasis);
+  padding:.35rem .9rem;border-radius:6px;font-size:.75rem;font-weight:600;
+  cursor:pointer;transition:all .2s;letter-spacing:.03em;
+}
+.btn-caja:hover{background:var(--oasis);color:#000;border-color:var(--oasis)}
+#caja-panel{
+  display:none;position:fixed;inset:0;z-index:200;
+  background:rgba(6,13,26,.97);overflow-y:auto;padding:56px 0 2rem;
+}
+.caja-inner{max-width:960px;margin:0 auto;padding:1.5rem 1rem}
+.caja-header{
+  display:flex;align-items:center;justify-content:space-between;
+  margin-bottom:1.25rem;gap:1rem;flex-wrap:wrap;
+}
+.caja-title{font-size:1.1rem;font-weight:700;color:var(--white)}
+.caja-filters{display:flex;gap:.4rem;flex-wrap:wrap}
+.caja-fbtn{
+  padding:.28rem .7rem;border-radius:5px;border:1px solid var(--border);
+  background:var(--card);color:var(--muted);font-size:.73rem;
+  cursor:pointer;transition:all .15s;
+}
+.caja-fbtn.active{background:var(--blue);color:#fff;border-color:var(--blue)}
+.caja-sumbar{
+  background:var(--card2);border:1px solid var(--border);border-radius:10px;
+  padding:.75rem 1.25rem;margin-bottom:1rem;
+  display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:.5rem;
+}
+.caja-total{font-size:1.5rem;font-weight:700;color:var(--green)}
+.caja-count{font-size:.78rem;color:var(--muted)}
+.caja-grid{
+  display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:1rem;
+}
+.caja-card{
+  background:var(--card);border:1px solid var(--border);border-radius:10px;
+  overflow:hidden;cursor:pointer;transition:border-color .2s;
+}
+.caja-card:hover{border-color:var(--blue)}
+.caja-card-img{width:100%;height:170px;object-fit:cover;display:block;background:var(--card2)}
+.caja-card-noimg{
+  width:100%;height:170px;display:flex;align-items:center;justify-content:center;
+  background:var(--card2);color:var(--muted);font-size:.78rem;
+}
+.caja-card-body{padding:.75rem;display:flex;flex-direction:column;gap:.25rem}
+.caja-card-amount{font-size:1.15rem;font-weight:700;color:var(--green)}
+.caja-card-cashier{font-size:.8rem;color:var(--text)}
+.caja-card-desc{font-size:.73rem;color:var(--muted)}
+.caja-card-meta{font-size:.68rem;color:var(--muted);margin-top:.2rem}
+.caja-rest-tag{
+  display:inline-block;padding:.1rem .4rem;border-radius:4px;
+  font-size:.65rem;font-weight:600;margin-top:.3rem;
+}
+.caja-rest-o{background:rgba(0,229,160,.12);color:var(--oasis)}
+.caja-rest-d{background:rgba(255,107,53,.12);color:var(--dali)}
+.caja-empty{text-align:center;color:var(--muted);font-size:.85rem;padding:3rem 0}
+#caja-lightbox{
+  display:none;position:fixed;inset:0;z-index:300;
+  background:rgba(0,0,0,.92);align-items:center;justify-content:center;
+  cursor:zoom-out;
+}
+#caja-lightbox.open{display:flex}
+#caja-lightbox img{
+  max-width:90vw;max-height:88vh;object-fit:contain;border-radius:8px;
+  box-shadow:0 0 40px rgba(0,0,0,.8);
+}
+#caja-lightbox .lb-close{
+  position:absolute;top:1rem;right:1.25rem;font-size:1.5rem;
+  color:#fff;cursor:pointer;opacity:.7;
+}
+#caja-lightbox .lb-close:hover{opacity:1}
 </style>
 </head>
 <body>
@@ -450,6 +523,7 @@ body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,san
   <div class="hud-right">
     <div class="live-dot"></div>
     <span class="hud-ts" id="ts-bar">Actualizado: {{ now }}</span>
+    <button class="btn-caja" onclick="openCaja()">💳 Caja</button>
     <button class="btn-compare" onclick="openCompare()">⚖ Comparar Almacenes</button>
   </div>
 </div>
@@ -653,6 +727,34 @@ body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,san
     </div><!-- detail-grid -->
   </div><!-- detail-inner -->
 </div><!-- detail-panel -->
+
+<!-- ── CAJA Panel ─────────────────────────────────────────────── -->
+<div id="caja-panel">
+  <div class="caja-inner">
+    <div class="caja-header">
+      <div class="caja-title">💳 CAJA — Comprobantes de pago</div>
+      <div class="caja-filters">
+        <button class="caja-fbtn active" id="cfbtn-all"   onclick="setCajaFilter('all')">Todos</button>
+        <button class="caja-fbtn"        id="cfbtn-oasis" onclick="setCajaFilter('oasis')">🌴 Oasis</button>
+        <button class="caja-fbtn"        id="cfbtn-dali"  onclick="setCajaFilter('dali')">🎨 Dali</button>
+      </div>
+      <button class="btn-close" onclick="closeCaja()">✕</button>
+    </div>
+    <div class="caja-sumbar" id="caja-sumbar">
+      <span class="caja-total" id="caja-total-amt">Bs 0.00</span>
+      <span class="caja-count" id="caja-count">0 comprobantes</span>
+    </div>
+    <div class="caja-grid" id="caja-grid">
+      <div class="caja-empty">Cargando...</div>
+    </div>
+  </div>
+</div>
+
+<!-- CAJA lightbox -->
+<div id="caja-lightbox" onclick="closeLightbox()">
+  <span class="lb-close">✕</span>
+  <img id="lb-img" src="" alt="comprobante"/>
+</div>
 
 <!-- ── Comparison Modal ───────────────────────────────────────── -->
 <div id="cmp-modal">
@@ -975,6 +1077,88 @@ async function refresh(){
     document.getElementById('ts-bar').textContent=
       'Actualizado: '+ts.toLocaleString('es',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'});
   }catch(e){console.warn('Refresh error:',e)}
+}
+
+// ── CAJA ────────────────────────────────────────────────────────────
+let cajaFilter='all';
+let cajaData={oasis:[],dali:[]};
+
+async function openCaja(){
+  document.getElementById('caja-panel').style.display='block';
+  await loadCajaData();
+}
+function closeCaja(){
+  document.getElementById('caja-panel').style.display='none';
+}
+
+function setCajaFilter(f){
+  cajaFilter=f;
+  ['all','oasis','dali'].forEach(k=>{
+    document.getElementById('cfbtn-'+k).classList.toggle('active',k===f);
+  });
+  renderCaja();
+}
+
+async function loadCajaData(){
+  try{
+    const resp=await fetch('/api/payments');
+    cajaData=await resp.json();
+  }catch(e){console.error('Error cargando pagos',e);}
+  renderCaja();
+}
+
+function renderCaja(){
+  let payments=[];
+  if(cajaFilter==='all'){
+    payments=[
+      ...(cajaData.oasis||[]).map(p=>({...p,rest:'oasis'})),
+      ...(cajaData.dali||[]).map(p=>({...p,rest:'dali'}))
+    ];
+  }else{
+    payments=(cajaData[cajaFilter]||[]).map(p=>({...p,rest:cajaFilter}));
+  }
+  payments.sort((a,b)=>(b.registered_at||'').localeCompare(a.registered_at||''));
+
+  const total=payments.reduce((s,p)=>s+(p.amount||0),0);
+  document.getElementById('caja-total-amt').textContent='Bs '+total.toFixed(2);
+  document.getElementById('caja-count').textContent=payments.length+' comprobante'+(payments.length===1?'':'s');
+
+  const grid=document.getElementById('caja-grid');
+  if(!payments.length){
+    grid.innerHTML='<div class="caja-empty">Sin comprobantes registrados.</div>';
+    return;
+  }
+
+  grid.innerHTML=payments.map(p=>{
+    const restTag=p.rest==='oasis'
+      ?'<span class="caja-rest-tag caja-rest-o">🌴 Oasis</span>'
+      :'<span class="caja-rest-tag caja-rest-d">🎨 Dali</span>';
+    const imgEl=p.file_path
+      ?`<img class="caja-card-img" src="/comprobantes/${p.file_path}" alt="comprobante"
+           onclick="event.stopPropagation();openLightbox('/comprobantes/${p.file_path}')">`
+      :`<div class="caja-card-noimg">📄 Sin imagen</div>`;
+    const amtStr=p.amount?`Bs ${(+p.amount).toFixed(2)}`:'—';
+    const desc=p.description?`<div class="caja-card-desc">${p.description}</div>`:'';
+    return`<div class="caja-card">
+      ${imgEl}
+      <div class="caja-card-body">
+        <div class="caja-card-amount">${amtStr}</div>
+        <div class="caja-card-cashier">👤 ${p.cashier_name}</div>
+        ${desc}
+        <div class="caja-card-meta">${fmtTime(p.registered_at)}</div>
+        ${restTag}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function openLightbox(src){
+  document.getElementById('lb-img').src=src;
+  document.getElementById('caja-lightbox').classList.add('open');
+}
+function closeLightbox(){
+  document.getElementById('caja-lightbox').classList.remove('open');
+  document.getElementById('lb-img').src='';
 }
 
 // Init

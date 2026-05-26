@@ -126,6 +126,17 @@ def init_db():
             created_at      TEXT DEFAULT (datetime('now','localtime')),
             updated_at      TEXT DEFAULT (datetime('now','localtime'))
         );
+
+        CREATE TABLE IF NOT EXISTS payments (
+            id            INTEGER PRIMARY KEY AUTOINCREMENT,
+            restaurant_id INTEGER NOT NULL REFERENCES restaurants(id),
+            cashier_name  TEXT NOT NULL,
+            amount        REAL DEFAULT 0,
+            description   TEXT DEFAULT '',
+            file_id       TEXT NOT NULL,
+            file_path     TEXT DEFAULT '',
+            registered_at TEXT DEFAULT (datetime('now','localtime'))
+        );
     """)
 
     # Seed restaurantes
@@ -531,3 +542,57 @@ def deactivate_promo(promo_id: int):
     with get_conn() as conn:
         conn.execute("UPDATE promos SET active = 0 WHERE id = ?", (promo_id,))
         conn.commit()
+
+
+# ── Menú desde Facebook (actualización parcial) ──────────────────────────────
+
+def update_menu_dishes(restaurant_id: int, soup: str, main_dish: str,
+                       drink: str, updated_by: str = "Facebook"):
+    """Update only soup/main_dish/drink; preserves price and initial_qty."""
+    now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    date = today()
+    with get_conn() as conn:
+        rows = conn.execute("""
+            UPDATE daily_menu
+            SET soup=?, main_dish=?, drink=?, updated_by=?, updated_at=?
+            WHERE restaurant_id=? AND date=?
+        """, (soup, main_dish, drink, updated_by, now, restaurant_id, date)).rowcount
+        if rows == 0:
+            conn.execute("""
+                INSERT OR IGNORE INTO daily_menu
+                    (restaurant_id, date, soup, main_dish, drink, price, initial_qty, current_qty, updated_by, updated_at)
+                VALUES (?, ?, ?, ?, ?, 0, 0, 0, ?, ?)
+            """, (restaurant_id, date, soup, main_dish, drink, updated_by, now))
+        conn.commit()
+
+
+# ── Comprobantes de pago ─────────────────────────────────────────────────────
+
+def add_payment(restaurant_id: int, cashier_name: str, amount: float,
+                description: str, file_id: str, file_path: str = "") -> int:
+    with get_conn() as conn:
+        cur = conn.execute("""
+            INSERT INTO payments (restaurant_id, cashier_name, amount, description, file_id, file_path)
+            VALUES (?, ?, ?, ?, ?, ?)
+        """, (restaurant_id, cashier_name, amount, description, file_id, file_path))
+        conn.commit()
+        return cur.lastrowid
+
+
+def get_payments(restaurant_id: int, limit: int = 100) -> list:
+    with get_conn() as conn:
+        return conn.execute("""
+            SELECT id, cashier_name, amount, description, file_id, file_path, registered_at
+            FROM payments WHERE restaurant_id = ?
+            ORDER BY registered_at DESC LIMIT ?
+        """, (restaurant_id, limit)).fetchall()
+
+
+def get_all_payments(limit: int = 200) -> list:
+    with get_conn() as conn:
+        return conn.execute("""
+            SELECT p.id, r.name as restaurant_name, p.cashier_name, p.amount,
+                   p.description, p.file_id, p.file_path, p.registered_at
+            FROM payments p JOIN restaurants r ON r.id = p.restaurant_id
+            ORDER BY p.registered_at DESC LIMIT ?
+        """, (limit,)).fetchall()

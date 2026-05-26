@@ -94,4 +94,11 @@ conn.execute("UPDATE daily_menu SET updated_at='2026-05-25 07:05:00' WHERE resta
 conn.commit()
 conn.close()
 
+# ── Comprobantes de pago demo ─────────────────────────────────────────────
+db.add_payment(oasis["id"], "Maria Garcia",  35.00, "QR Mesa 3",        file_id="demo1", file_path="")
+db.add_payment(oasis["id"], "Maria Garcia",  70.00, "QR Mesa 7 - 2 platos", file_id="demo2", file_path="")
+db.add_payment(oasis["id"], "Luis Mendoza",  35.00, "QR efectivo",      file_id="demo3", file_path="")
+db.add_payment(dali["id"],  "Ana Torres",    45.00, "QR Mesa 1",        file_id="demo4", file_path="")
+db.add_payment(dali["id"],  "Pedro Ramirez", 90.00, "QR Mesa 5 - combo", file_id="demo5", file_path="")
+
 print("OK - Datos de demo cargados correctamente.")
