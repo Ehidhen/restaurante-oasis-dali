@@ -1,0 +1,412 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Panel — Oasis &amp; Dali</title>
+  <style>
+    :root {
+      --verde:    #22c55e;
+      --amarillo: #f59e0b;
+      --rojo:     #ef4444;
+      --azul:     #3b82f6;
+      --gris:     #6b7280;
+      --bg:       #0f172a;
+      --card:     #1e293b;
+      --border:   #334155;
+      --text:     #e2e8f0;
+      --muted:    #94a3b8;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      min-height: 100vh;
+    }
+    header {
+      background: var(--card);
+      border-bottom: 1px solid var(--border);
+      padding: 1rem 1.5rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: .5rem;
+    }
+    header h1 { font-size: 1.25rem; font-weight: 700; }
+    .timestamp { font-size: .75rem; color: var(--muted); }
+    .refresh-bar {
+      font-size: .7rem;
+      color: var(--muted);
+      display: flex;
+      align-items: center;
+      gap: .4rem;
+    }
+    .dot {
+      width: 8px; height: 8px; border-radius: 50%;
+      background: var(--verde);
+      animation: pulse 2s infinite;
+    }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50%       { opacity: .3; }
+    }
+
+    main {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1.5rem;
+      padding: 1.5rem;
+      max-width: 1400px;
+      margin: 0 auto;
+    }
+    @media (max-width: 768px) {
+      main { grid-template-columns: 1fr; padding: 1rem; }
+    }
+
+    .restaurant-col { display: flex; flex-direction: column; gap: 1rem; }
+
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 1.25rem;
+    }
+    .card-title {
+      font-size: .7rem;
+      font-weight: 600;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: .75rem;
+    }
+
+    /* ── Estado principal ── */
+    .rest-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: .5rem;
+      margin-bottom: 1rem;
+    }
+    .rest-name { font-size: 1.4rem; font-weight: 700; }
+
+    .badge {
+      padding: .25rem .75rem;
+      border-radius: 999px;
+      font-size: .75rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: .05em;
+    }
+    .badge-green  { background: rgba(34,197,94,.2);  color: var(--verde); }
+    .badge-yellow { background: rgba(245,158,11,.2); color: var(--amarillo); }
+    .badge-red    { background: rgba(239,68,68,.2);  color: var(--rojo); }
+
+    /* ── Contador grande ── */
+    .qty-display {
+      text-align: center;
+      padding: 1.5rem 1rem;
+    }
+    .qty-number {
+      font-size: 5rem;
+      font-weight: 800;
+      line-height: 1;
+    }
+    .qty-number.green  { color: var(--verde); }
+    .qty-number.yellow { color: var(--amarillo); }
+    .qty-number.red    { color: var(--rojo); }
+    .qty-label { font-size: .85rem; color: var(--muted); margin-top: .25rem; }
+
+    /* ── Menú ── */
+    .menu-row {
+      display: flex;
+      align-items: baseline;
+      gap: .5rem;
+      padding: .35rem 0;
+      border-bottom: 1px solid var(--border);
+    }
+    .menu-row:last-child { border-bottom: none; }
+    .menu-icon { font-size: .9rem; width: 1.2rem; flex-shrink: 0; }
+    .menu-text { flex: 1; font-size: .9rem; }
+    .menu-price {
+      font-size: 1rem;
+      font-weight: 700;
+      color: var(--verde);
+      white-space: nowrap;
+    }
+    .no-menu { color: var(--muted); font-size: .85rem; }
+
+    /* ── Ventas ── */
+    .sales-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: .5rem;
+    }
+    .sales-item {
+      background: rgba(255,255,255,.03);
+      border-radius: 8px;
+      padding: .6rem .75rem;
+    }
+    .sales-item .s-label { font-size: .7rem; color: var(--muted); }
+    .sales-item .s-value { font-size: 1.1rem; font-weight: 700; }
+    .sales-total {
+      grid-column: 1 / -1;
+      background: rgba(59,130,246,.1);
+      border-radius: 8px;
+      padding: .6rem .75rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .sales-total .s-label { font-size: .8rem; color: var(--azul); font-weight: 600; }
+    .sales-total .s-value { font-size: 1.3rem; font-weight: 800; color: var(--azul); }
+
+    /* ── Faltantes ── */
+    .shortage-list { list-style: none; }
+    .shortage-item {
+      display: flex;
+      align-items: center;
+      gap: .5rem;
+      padding: .4rem 0;
+      border-bottom: 1px solid var(--border);
+      font-size: .85rem;
+    }
+    .shortage-item:last-child { border-bottom: none; }
+    .shortage-item.bought { opacity: .5; text-decoration: line-through; }
+    .shortage-item .check { font-size: 1rem; }
+    .no-shortages { color: var(--verde); font-size: .85rem; }
+
+    /* ── Transferencias ── */
+    .transfer-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: .4rem 0;
+      border-bottom: 1px solid var(--border);
+      font-size: .8rem;
+      flex-wrap: wrap;
+      gap: .25rem;
+    }
+    .transfer-item:last-child { border-bottom: none; }
+    .transfer-status {
+      padding: .15rem .5rem;
+      border-radius: 999px;
+      font-size: .65rem;
+      font-weight: 600;
+      text-transform: uppercase;
+    }
+    .status-requested { background: rgba(245,158,11,.2); color: var(--amarillo); }
+    .status-sent      { background: rgba(59,130,246,.2);  color: var(--azul); }
+    .status-received  { background: rgba(34,197,94,.2);   color: var(--verde); }
+    .no-transfers { color: var(--muted); font-size: .85rem; }
+
+    footer {
+      text-align: center;
+      padding: 1rem;
+      color: var(--muted);
+      font-size: .7rem;
+      border-top: 1px solid var(--border);
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>🍽 Panel Restaurantes — Oasis &amp; Dali</h1>
+  <div style="display:flex;gap:1rem;align-items:center;flex-wrap:wrap;">
+    <span class="timestamp">Actualizado: <span id="ts">{{ now }}</span></span>
+    <div class="refresh-bar"><div class="dot"></div> Auto-refresh cada 30 s</div>
+  </div>
+</header>
+
+<main id="main-content">
+  {% for rest in [oasis, dali] %}
+  {% if rest %}
+  <div class="restaurant-col" id="col-{{ rest.name }}">
+
+    <!-- Estado principal + contador -->
+    <div class="card">
+      <div class="rest-header">
+        <span class="rest-name">{{ rest.label }}</span>
+        {% if rest.estado == 'ABIERTO' %}
+          <span class="badge badge-green">Abierto</span>
+        {% elif rest.estado == 'POCAS_UNIDADES' %}
+          <span class="badge badge-yellow">⚠ Pocas unidades</span>
+        {% else %}
+          <span class="badge badge-red">Sin almuerzos</span>
+        {% endif %}
+      </div>
+
+      <div class="qty-display">
+        <div class="qty-number {% if rest.qty == 0 %}red{% elif rest.qty <= 5 %}yellow{% else %}green{% endif %}">
+          {{ rest.qty }}
+        </div>
+        <div class="qty-label">almuerzos disponibles</div>
+      </div>
+    </div>
+
+    <!-- Menú del día -->
+    <div class="card">
+      <div class="card-title">Menú del día</div>
+      {% if rest.menu %}
+        <div class="menu-row">
+          <span class="menu-icon">🍲</span>
+          <span class="menu-text">{{ rest.menu.soup or '—' }}</span>
+        </div>
+        <div class="menu-row">
+          <span class="menu-icon">🍽</span>
+          <span class="menu-text">{{ rest.menu.main_dish or '—' }}</span>
+        </div>
+        <div class="menu-row">
+          <span class="menu-icon">🥤</span>
+          <span class="menu-text">{{ rest.menu.drink or '—' }}</span>
+        </div>
+        <div class="menu-row" style="margin-top:.5rem;">
+          <span class="menu-icon">💰</span>
+          <span class="menu-text">Precio almuerzo</span>
+          <span class="menu-price">${{ "%.2f"|format(rest.menu.price) }}</span>
+        </div>
+      {% else %}
+        <p class="no-menu">❌ Menú no definido para hoy.</p>
+      {% endif %}
+    </div>
+
+    <!-- Ventas del día -->
+    <div class="card">
+      <div class="card-title">Ventas de hoy</div>
+      <div class="sales-grid">
+        <div class="sales-item">
+          <div class="s-label">🍽 Almuerzos</div>
+          <div class="s-value">{{ rest.sales.almuerzos }}</div>
+        </div>
+        <div class="sales-item">
+          <div class="s-label">💵 Ingresos</div>
+          <div class="s-value">${{ "%.2f"|format(rest.sales.almuerzos_total) }}</div>
+        </div>
+        <div class="sales-item">
+          <div class="s-label">🍴 Extras</div>
+          <div class="s-value">{{ rest.sales.extras }}</div>
+        </div>
+        <div class="sales-item">
+          <div class="s-label">🥤 Refrescos</div>
+          <div class="s-value">{{ rest.sales.refrescos }}</div>
+        </div>
+        <div class="sales-total">
+          <span class="s-label">Total del día</span>
+          <span class="s-value">${{ "%.2f"|format(rest.sales.total) }}</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Faltantes -->
+    <div class="card">
+      <div class="card-title">Lista de faltantes</div>
+      {% if rest.shortages %}
+        <ul class="shortage-list">
+          {% for s in rest.shortages %}
+          <li class="shortage-item {% if s.status == 'bought' %}bought{% endif %}">
+            <span class="check">{% if s.status == 'bought' %}✅{% else %}🛒{% endif %}</span>
+            <span style="flex:1">{{ s.item_name }}</span>
+            <span style="color:var(--muted)">{{ s.quantity_needed }}</span>
+          </li>
+          {% endfor %}
+        </ul>
+      {% else %}
+        <p class="no-shortages">✅ Sin faltantes pendientes.</p>
+      {% endif %}
+    </div>
+
+    <!-- Transferencias del día -->
+    <div class="card">
+      <div class="card-title">Transferencias de hoy</div>
+      {% if rest.transfers %}
+        {% for t in rest.transfers %}
+        <div class="transfer-item">
+          <span>
+            {{ t.from | capitalize }} → {{ t.to | capitalize }}
+            <strong>×{{ t.quantity }}</strong>
+          </span>
+          <span class="transfer-status status-{{ t.status }}">
+            {% if t.status == 'requested' %}Solicitado
+            {% elif t.status == 'sent' %}En camino
+            {% else %}Recibido{% endif %}
+          </span>
+        </div>
+        {% endfor %}
+      {% else %}
+        <p class="no-transfers">Sin transferencias hoy.</p>
+      {% endif %}
+    </div>
+
+  </div>
+  {% endif %}
+  {% endfor %}
+</main>
+
+<footer>
+  Panel en tiempo real — Restaurantes Oasis &amp; Dali &nbsp;|&nbsp; Auto-refresh 30 s
+</footer>
+
+<script>
+  // Auto-refresh via API cada 30 segundos
+  const STATUS_LABELS = {
+    ABIERTO:        '<span class="badge badge-green">Abierto</span>',
+    POCAS_UNIDADES: '<span class="badge badge-yellow">⚠ Pocas unidades</span>',
+    SIN_ALMUERZOS:  '<span class="badge badge-red">Sin almuerzos</span>',
+  };
+
+  function qtyClass(qty) {
+    if (qty === 0) return 'red';
+    if (qty <= 5)  return 'yellow';
+    return 'green';
+  }
+
+  function transferLabel(s) {
+    return s === 'requested' ? 'Solicitado' : s === 'sent' ? 'En camino' : 'Recibido';
+  }
+
+  async function refresh() {
+    try {
+      const res  = await fetch('/api/status');
+      const data = await res.json();
+
+      for (const name of ['oasis', 'dali']) {
+        const r = data[name];
+        if (!r) continue;
+
+        // Contador
+        const qtyEl = document.querySelector(`#col-${name} .qty-number`);
+        if (qtyEl) {
+          qtyEl.textContent = r.qty;
+          qtyEl.className = `qty-number ${qtyClass(r.qty)}`;
+        }
+
+        // Badge
+        const badgeEl = document.querySelector(`#col-${name} .rest-header .badge`);
+        if (badgeEl) {
+          badgeEl.outerHTML = STATUS_LABELS[r.estado] || '';
+        }
+
+        // Ventas totales (solo el total para no reescribir todo)
+        const totalEls = document.querySelectorAll(`#col-${name} .sales-total .s-value`);
+        if (totalEls.length) totalEls[0].textContent = '$' + r.sales.total.toFixed(2);
+      }
+
+      document.getElementById('ts').textContent =
+        new Date(data.timestamp).toLocaleString('es', {
+          day: '2-digit', month: '2-digit', year: 'numeric',
+          hour: '2-digit', minute: '2-digit'
+        });
+    } catch (e) {
+      console.warn('Auto-refresh error:', e);
+    }
+  }
+
+  setInterval(refresh, 30000);
+</script>
+
+</body>
+</html>
