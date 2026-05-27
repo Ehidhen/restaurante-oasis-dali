@@ -46,8 +46,18 @@ async def cmd_agregar_faltante(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
     """
     rid   = ctx.user_data["restaurant_id"]
     rname = ctx.user_data["restaurant_name"]
+    role  = ctx.user_data.get("role", "")
     user  = ctx.user_data.get("username") or update.effective_user.full_name
     args  = " ".join(ctx.args) if ctx.args else ""
+
+    if not rid:
+        await update.message.reply_text(
+            "👑 Especifica el restaurante primero:\n"
+            "`/agregar_faltante oasis Tomates | 5 kg`\n"
+            "`/agregar_faltante dali Pollo | 8 kg`",
+            parse_mode="Markdown"
+        )
+        return
 
     if not args.strip():
         await update.message.reply_text(
@@ -104,9 +114,18 @@ async def cmd_agregar_faltante(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
 @require_role("kitchen_chief", "supervisor", "boss")
 async def cmd_marcar_comprado(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
     """Uso: /marcar_comprado tomates"""
-    rid = ctx.user_data["restaurant_id"]
+    rid   = ctx.user_data["restaurant_id"]
     rname = ctx.user_data["restaurant_name"]
-    args = " ".join(ctx.args) if ctx.args else ""
+    args  = " ".join(ctx.args) if ctx.args else ""
+
+    if not rid:
+        await update.message.reply_text(
+            "👑 Especifica el restaurante:\n"
+            "`/marcar_comprado oasis Tomates`\n"
+            "`/marcar_comprado dali Pollo`",
+            parse_mode="Markdown"
+        )
+        return
 
     if not args.strip():
         await update.message.reply_text(

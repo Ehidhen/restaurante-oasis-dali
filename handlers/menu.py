@@ -49,6 +49,15 @@ async def cmd_definir_menu(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
     """
     rid = ctx.user_data["restaurant_id"]
     rname = ctx.user_data["restaurant_name"]
+
+    if not rid:
+        await update.message.reply_text(
+            "👑 Especifica el restaurante:\n"
+            "`/definir_menu oasis Sopa | Plato | Refresco | 8.50 | 60`",
+            parse_mode="Markdown"
+        )
+        return
+
     args = " ".join(ctx.args) if ctx.args else ""
 
     parts = [p.strip() for p in args.split("|")]
@@ -90,6 +99,15 @@ async def cmd_agregar_extra(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
     """
     rid = ctx.user_data["restaurant_id"]
     rname = ctx.user_data["restaurant_name"]
+
+    if not rid:
+        await update.message.reply_text(
+            "👑 Especifica el restaurante:\n"
+            "`/agregar_extra oasis Pollo a la plancha | 5.00`",
+            parse_mode="Markdown"
+        )
+        return
+
     args = " ".join(ctx.args) if ctx.args else ""
     parts = [p.strip() for p in args.split("|")]
 
@@ -120,6 +138,14 @@ async def cmd_precio(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
     """Uso: /precio 8.50"""
     rid = ctx.user_data["restaurant_id"]
     rname = ctx.user_data["restaurant_name"]
+
+    if not rid:
+        await update.message.reply_text(
+            "👑 Especifica el restaurante:\n"
+            "`/precio oasis 9.00` o `/precio dali 8.50`",
+            parse_mode="Markdown"
+        )
+        return
 
     if not ctx.args:
         menu = db.get_menu(rid)
