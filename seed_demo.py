@@ -4,6 +4,14 @@ os.environ["DB_PATH"] = "demo_restaurante.db"
 
 import database as db
 
+# Limpiar datos anteriores para evitar duplicados al re-ejecutar
+_clean = sqlite3.connect("demo_restaurante.db")
+for t in ("shortage_list","sales","daily_menu","extra_dishes",
+          "transfers","promos","drink_history","payments","social_posts"):
+    _clean.execute(f"DELETE FROM {t}")
+_clean.commit()
+_clean.close()
+
 db.init_db()
 
 oasis = db.get_restaurant("oasis")
@@ -124,4 +132,122 @@ db.add_payment(dali["id"],  "Ana Torres",    35.00, "QR Mesa 3",
                file_id="demo8", file_path="", shift="noche",
                verification_status="pending",   extracted_account="", extracted_amount=0)
 
+# ── Datos históricos para estadísticas (últimos 35 días) ─────────────────────
+import random, sqlite3 as _sql
+
+_hist = _sql.connect("demo_restaurante.db")
+
+# Patrones realistas: lunes-viernes más ventas, fin de semana menos
+_oasis_price = 8.50
+_dali_price  = 9.00
+
+# Ingredientes que se van agotando con frecuencia por restaurante
+_oasis_recurrent = ["Tomates", "Cebollas", "Papas", "Aceite vegetal", "Servilletas",
+                    "Pollo", "Sal", "Arroz", "Cebolla", "Tomates", "Papas"]
+_dali_recurrent  = ["Pollo", "Arroz", "Lentejas", "Tomates", "Detergente loza",
+                    "Bolsas basura", "Arroz", "Pollo", "Lentejas", "Cebollas"]
+
+random.seed(42)  # reproducible
+
+for offset in range(35, 0, -1):
+    d = f"date('now','-{offset} days','localtime')"
+    ds = f"-{offset} days"  # para fecha literal en SQLite
+
+    # Almuerzos vendidos Oasis (35-55 entre semana, 20-30 fines)
+    dow = (offset % 7)
+    is_weekend = dow in (0, 6)
+    o_alm = random.randint(20, 30) if is_weekend else random.randint(35, 55)
+    d_alm = random.randint(15, 25) if is_weekend else random.randint(28, 45)
+    o_init = o_alm + random.randint(5, 18)
+    d_init = d_alm + random.randint(3, 15)
+
+    # Insertar menú histórico
+    for rid, alm, init, price in [
+        (oasis["id"], o_alm, o_init, _oasis_price),
+        (dali["id"],  d_alm, d_init, _dali_price)
+    ]:
+        soups  = ["Sopa de pollo", "Crema de zapallo", "Sopa de res", "Caldo de pollo",
+                  "Sopa de verduras", "Crema de espinaca", "Locro de papa"]
+        mains  = ["Arroz con pollo", "Seco de res", "Churrasco + ensalada",
+                  "Pollo a la plancha + menestra", "Arroz con carne guisada",
+                  "Seco de pollo + arroz", "Milanesa + papas"]
+        drinks = ["Jugo de naranja", "Limonada", "Jugo de maracuyá",
+                  "Refresco de durazno", "Jugo de mora", "Limonada de maracuyá"]
+        _hist.execute("""
+            INSERT OR IGNORE INTO daily_menu
+              (restaurant_id, date, soup, main_dish, drink, price, initial_qty, current_qty, updated_by)
+            VALUES (?, date('now', ?, 'localtime'), ?, ?, ?, ?, ?, ?, 'Demo')
+        """, (rid, ds, random.choice(soups), random.choice(mains),
+              random.choice(drinks), price, init, init - alm))
+
+    # Insertar ventas Oasis
+    o_extras  = random.randint(0, 4)
+    o_refres  = random.randint(2, 8)
+    for _ in range(o_alm):
+        _hist.execute("""
+            INSERT INTO sales (restaurant_id, date, type, quantity, amount, cashier_id)
+            VALUES (?, date('now', ?, 'localtime'), 'almuerzo', 1, ?, 'cajera_oasis')
+        """, (oasis["id"], ds, _oasis_price))
+    if o_extras:
+        _hist.execute("""
+            INSERT INTO sales (restaurant_id, date, type, quantity, amount, cashier_id)
+            VALUES (?, date('now', ?, 'localtime'), 'extra', ?, ?, 'cajera_oasis')
+        """, (oasis["id"], ds, o_extras, o_extras * 4.5))
+    if o_refres:
+        _hist.execute("""
+            INSERT INTO sales (restaurant_id, date, type, quantity, amount, cashier_id)
+            VALUES (?, date('now', ?, 'localtime'), 'refresco', ?, ?, 'cajera_oasis')
+        """, (oasis["id"], ds, o_refres, o_refres * 3.5))
+
+    # Insertar ventas Dali
+    d_extras  = random.randint(0, 3)
+    d_refres  = random.randint(1, 6)
+    for _ in range(d_alm):
+        _hist.execute("""
+            INSERT INTO sales (restaurant_id, date, type, quantity, amount, cashier_id)
+            VALUES (?, date('now', ?, 'localtime'), 'almuerzo', 1, ?, 'cajero_dali')
+        """, (dali["id"], ds, _dali_price))
+    if d_extras:
+        _hist.execute("""
+            INSERT INTO sales (restaurant_id, date, type, quantity, amount, cashier_id)
+            VALUES (?, date('now', ?, 'localtime'), 'extra', ?, ?, 'cajero_dali')
+        """, (dali["id"], ds, d_extras, d_extras * 5.0))
+    if d_refres:
+        _hist.execute("""
+            INSERT INTO sales (restaurant_id, date, type, quantity, amount, cashier_id)
+            VALUES (?, date('now', ?, 'localtime'), 'refresco', ?, ?, 'cajero_dali')
+        """, (dali["id"], ds, d_refres, d_refres * 3.5))
+
+    # Faltantes históricos (cada 3-4 días algo falta)
+    if offset % 3 == 0:
+        item_o = random.choice(_oasis_recurrent)
+        item_d = random.choice(_dali_recurrent)
+        for rid, item in [(oasis["id"], item_o), (dali["id"], item_d)]:
+            qty_label = random.choice(["2 kg", "5 kg", "1 caja", "3 unidades", "500 g"])
+            status    = random.choice(["bought", "bought", "bought", "pending"])
+            _hist.execute("""
+                INSERT INTO shortage_list (restaurant_id, item_name, quantity_needed, date, status, updated_by, updated_at)
+                VALUES (?, ?, ?, date('now', ?, 'localtime'), ?, 'Demo', datetime('now', ?, 'localtime'))
+            """, (rid, item, qty_label, ds, status, ds))
+
+    # Pagos históricos (2-5 por día)
+    n_pay = random.randint(2, 5)
+    for i in range(n_pay):
+        rid   = random.choice([oasis["id"], dali["id"]])
+        amt   = round(random.choice([35, 35, 35, 70, 45, 90, 52.5]) , 2)
+        st    = random.choices(["verified","verified","verified","wrong_account","pending"],
+                               weights=[75, 5, 5, 10, 5])[0]
+        shift = "manana" if i < n_pay // 2 + 1 else "noche"
+        _hist.execute("""
+            INSERT INTO payments (restaurant_id, cashier_name, amount, description,
+                                  file_id, file_path, shift, verification_status,
+                                  extracted_account, extracted_amount, registered_at)
+            VALUES (?, 'Demo Mesero', ?, 'QR histórico', '', '', ?, ?, '', 0,
+                    datetime('now', ?, 'localtime'))
+        """, (rid, amt, shift, st, ds))
+
+_hist.commit()
+_hist.close()
+
 print("OK - Datos de demo cargados correctamente.")
+

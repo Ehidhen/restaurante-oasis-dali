@@ -683,3 +683,188 @@ def get_all_payments(limit: int = 200) -> list:
             FROM payments p JOIN restaurants r ON r.id = p.restaurant_id
             ORDER BY p.registered_at DESC LIMIT ?
         """, (limit,)).fetchall()
+
+
+# ── Estadísticas ─────────────────────────────────────────────────────────────
+
+def get_sales_by_day(restaurant_id: int, days: int = 30) -> list:
+    """Ventas diarias agrupadas (fecha, qty_almuerzos, total_Bs) — últimos N días."""
+    with get_conn() as conn:
+        return conn.execute("""
+            SELECT date,
+                   SUM(CASE WHEN type='almuerzo' THEN quantity ELSE 0 END) as almuerzos,
+                   SUM(CASE WHEN type='extra'    THEN quantity ELSE 0 END) as extras,
+                   SUM(CASE WHEN type='refresco' THEN quantity ELSE 0 END) as refrescos,
+                   SUM(amount) as total
+            FROM sales
+            WHERE restaurant_id=?
+              AND date >= date('now', ?, 'localtime')
+            GROUP BY date
+            ORDER BY date ASC
+        """, (restaurant_id, f"-{days-1} days")).fetchall()
+
+
+def get_monthly_revenue(restaurant_id: int, months: int = 6) -> list:
+    """Ingresos mensuales — últimos N meses."""
+    with get_conn() as conn:
+        return conn.execute("""
+            SELECT strftime('%Y-%m', date) as month,
+                   SUM(amount) as total,
+                   SUM(CASE WHEN type='almuerzo' THEN quantity ELSE 0 END) as almuerzos
+            FROM sales
+            WHERE restaurant_id=?
+              AND date >= date('now', ?, 'localtime')
+            GROUP BY month
+            ORDER BY month ASC
+        """, (restaurant_id, f"-{months} months")).fetchall()
+
+
+def get_shortage_frequency(restaurant_id: int, days: int = 90) -> list:
+    """Ingredientes más registrados como faltantes — ranking por frecuencia."""
+    with get_conn() as conn:
+        return conn.execute("""
+            SELECT item_name,
+                   COUNT(*)                                     as veces,
+                   SUM(CASE WHEN status='pending' THEN 1 ELSE 0 END) as pendientes,
+                   SUM(CASE WHEN status='bought'  THEN 1 ELSE 0 END) as comprados,
+                   MAX(date)                                    as ultima_vez
+            FROM shortage_list
+            WHERE restaurant_id=?
+              AND date >= date('now', ?, 'localtime')
+            GROUP BY item_name
+            ORDER BY veces DESC
+            LIMIT 15
+        """, (restaurant_id, f"-{days} days")).fetchall()
+
+
+def get_capacity_utilization(restaurant_id: int, days: int = 30) -> list:
+    """Utilización diaria de capacidad: almuerzos vendidos vs inicial."""
+    with get_conn() as conn:
+        return conn.execute("""
+            SELECT m.date,
+                   m.initial_qty,
+                   COALESCE(SUM(CASE WHEN s.type='almuerzo' THEN s.quantity ELSE 0 END), 0) as vendidos,
+                   ROUND(100.0 * COALESCE(SUM(CASE WHEN s.type='almuerzo' THEN s.quantity ELSE 0 END), 0)
+                         / NULLIF(m.initial_qty, 0), 1) as pct
+            FROM daily_menu m
+            LEFT JOIN sales s ON s.restaurant_id=m.restaurant_id AND s.date=m.date
+            WHERE m.restaurant_id=?
+              AND m.date >= date('now', ?, 'localtime')
+            GROUP BY m.date
+            ORDER BY m.date ASC
+        """, (restaurant_id, f"-{days-1} days")).fetchall()
+
+
+def get_payments_breakdown(restaurant_id: int, days: int = 30) -> dict:
+    """Desglose de comprobantes por estado de verificación."""
+    with get_conn() as conn:
+        rows = conn.execute("""
+            SELECT verification_status, COUNT(*) as cnt, SUM(amount) as total
+            FROM payments
+            WHERE restaurant_id=?
+              AND date(registered_at) >= date('now', ?, 'localtime')
+            GROUP BY verification_status
+        """, (restaurant_id, f"-{days-1} days")).fetchall()
+    result = {"verified": 0, "wrong_account": 0, "unreadable": 0, "pending": 0,
+              "total_cnt": 0, "total_amount": 0.0}
+    for r in rows:
+        s = r["verification_status"]
+        if s in result:
+            result[s] = r["cnt"]
+        result["total_cnt"] += r["cnt"]
+        result["total_amount"] += (r["total"] or 0)
+    return result
+
+
+def get_shift_comparison(restaurant_id: int, days: int = 30) -> dict:
+    """Rendimiento turno mañana vs noche (pagos + montos)."""
+    with get_conn() as conn:
+        rows = conn.execute("""
+            SELECT shift, COUNT(*) as cnt, SUM(amount) as total
+            FROM payments
+            WHERE restaurant_id=?
+              AND date(registered_at) >= date('now', ?, 'localtime')
+            GROUP BY shift
+        """, (restaurant_id, f"-{days-1} days")).fetchall()
+    result = {"manana": {"cnt": 0, "total": 0.0}, "noche": {"cnt": 0, "total": 0.0}}
+    for r in rows:
+        sh = r["shift"]
+        if sh in result:
+            result[sh] = {"cnt": r["cnt"], "total": round(r["total"] or 0, 2)}
+    return result
+
+
+def get_kpis(restaurant_id: int) -> dict:
+    """KPIs clave del restaurante: este mes, semana, hoy."""
+    with get_conn() as conn:
+        today_s = today()
+        # Hoy
+        hoy = conn.execute("""
+            SELECT SUM(amount) as total,
+                   SUM(CASE WHEN type='almuerzo' THEN quantity ELSE 0 END) as almuerzos
+            FROM sales WHERE restaurant_id=? AND date=?
+        """, (restaurant_id, today_s)).fetchone()
+        # Esta semana
+        semana = conn.execute("""
+            SELECT SUM(amount) as total
+            FROM sales WHERE restaurant_id=?
+              AND date >= date('now','-6 days','localtime')
+        """, (restaurant_id,)).fetchone()
+        # Este mes
+        mes = conn.execute("""
+            SELECT SUM(amount) as total,
+                   SUM(CASE WHEN type='almuerzo' THEN quantity ELSE 0 END) as almuerzos
+            FROM sales WHERE restaurant_id=?
+              AND strftime('%Y-%m', date) = strftime('%Y-%m', 'now', 'localtime')
+        """, (restaurant_id,)).fetchone()
+        # Promedio diario (últimos 30 días con ventas)
+        avg = conn.execute("""
+            SELECT AVG(daily) as avg_daily FROM (
+                SELECT SUM(amount) as daily FROM sales
+                WHERE restaurant_id=? AND date >= date('now','-29 days','localtime')
+                GROUP BY date
+            )
+        """, (restaurant_id,)).fetchone()
+        # Mejor día del mes
+        best = conn.execute("""
+            SELECT date, SUM(amount) as total FROM sales
+            WHERE restaurant_id=?
+              AND strftime('%Y-%m', date) = strftime('%Y-%m', 'now', 'localtime')
+            GROUP BY date ORDER BY total DESC LIMIT 1
+        """, (restaurant_id,)).fetchone()
+    return {
+        "hoy_total":       round(hoy["total"] or 0, 2),
+        "hoy_almuerzos":   hoy["almuerzos"] or 0,
+        "semana_total":    round(semana["total"] or 0, 2),
+        "mes_total":       round(mes["total"] or 0, 2),
+        "mes_almuerzos":   mes["almuerzos"] or 0,
+        "avg_diario":      round(avg["avg_daily"] or 0, 2),
+        "mejor_dia_fecha": best["date"] if best and best["date"] else "—",
+        "mejor_dia_total": round(best["total"] or 0, 2) if best else 0,
+    }
+
+
+def get_combined_stats(days: int = 30) -> dict:
+    """Estadísticas combinadas ambos restaurantes para el panel del dueño."""
+    oasis = get_restaurant("oasis")
+    dali  = get_restaurant("dali")
+    return {
+        "oasis": {
+            "kpis":          get_kpis(oasis["id"]),
+            "sales_by_day":  [dict(r) for r in get_sales_by_day(oasis["id"], days)],
+            "monthly":       [dict(r) for r in get_monthly_revenue(oasis["id"], 6)],
+            "shortages":     [dict(r) for r in get_shortage_frequency(oasis["id"], 90)],
+            "capacity":      [dict(r) for r in get_capacity_utilization(oasis["id"], days)],
+            "payments":      get_payments_breakdown(oasis["id"], days),
+            "shifts":        get_shift_comparison(oasis["id"], days),
+        },
+        "dali": {
+            "kpis":          get_kpis(dali["id"]),
+            "sales_by_day":  [dict(r) for r in get_sales_by_day(dali["id"], days)],
+            "monthly":       [dict(r) for r in get_monthly_revenue(dali["id"], 6)],
+            "shortages":     [dict(r) for r in get_shortage_frequency(dali["id"], 90)],
+            "capacity":      [dict(r) for r in get_capacity_utilization(dali["id"], days)],
+            "payments":      get_payments_breakdown(dali["id"], days),
+            "shifts":        get_shift_comparison(dali["id"], days),
+        },
+    }

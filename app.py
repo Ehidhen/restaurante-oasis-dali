@@ -1,10 +1,11 @@
 import os
-from flask import Flask, render_template, jsonify, send_from_directory, abort
+from flask import Flask, render_template, jsonify, send_from_directory, abort, request
 import database as db
 import config
 from datetime import datetime
 from handlers.refrescos import sugerir_refresco
 from handlers.social import get_latest_posts_summary
+from handlers.analytics import get_ai_analysis
 
 COMPROBANTES_DIR = os.getenv("COMPROBANTES_DIR", "comprobantes")
 
@@ -129,6 +130,23 @@ def serve_comprobante(filename):
     if not safe.endswith(".jpg"):
         abort(404)
     return send_from_directory(os.path.abspath(COMPROBANTES_DIR), safe)
+
+
+@app.route("/api/stats")
+def api_stats():
+    """Panel de estadísticas para el dueño."""
+    days = int(request.args.get("days", 30))
+    days = max(7, min(days, 365))
+    stats = db.get_combined_stats(days)
+    return jsonify(stats)
+
+
+@app.route("/api/stats/ai")
+def api_stats_ai():
+    """Análisis IA predictivo (caché 30 min)."""
+    stats = db.get_combined_stats(30)
+    analysis = get_ai_analysis(stats)
+    return jsonify(analysis)
 
 
 @app.route("/health")

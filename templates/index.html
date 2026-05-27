@@ -51,6 +51,109 @@ body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,san
   cursor:pointer;transition:all .2s;letter-spacing:.03em;
 }
 .btn-compare:hover{background:var(--blue);color:#fff;border-color:var(--blue)}
+.btn-stats{
+  background:linear-gradient(135deg,#1a1a3a,#0f0f28);
+  border:1px solid #4a3a8a;color:#a78bfa;
+  padding:.35rem .9rem;border-radius:8px;font-size:.78rem;font-weight:600;
+  cursor:pointer;transition:all .2s;letter-spacing:.03em;
+}
+.btn-stats:hover{background:#7c3aed;color:#fff;border-color:#7c3aed}
+
+/* ── Stats Panel ──────────────────────────────────────────────────── */
+#stats-panel{
+  display:none;position:fixed;inset:0;z-index:250;
+  background:rgba(6,13,26,.97);overflow-y:auto;padding-top:56px;
+}
+.stats-header{
+  display:flex;align-items:center;gap:1rem;padding:1.2rem 1.4rem .8rem;
+  border-bottom:1px solid var(--border);position:sticky;top:56px;
+  background:rgba(6,13,26,.98);z-index:10;
+}
+.stats-header h2{flex:1;font-size:1.1rem;color:var(--white)}
+.stats-filter-btns{display:flex;gap:.5rem}
+.stats-fbtn{
+  padding:.28rem .8rem;border-radius:6px;font-size:.75rem;font-weight:600;
+  border:1px solid var(--border);background:var(--card);color:var(--muted);cursor:pointer;
+}
+.stats-fbtn.active{background:#7c3aed;color:#fff;border-color:#7c3aed}
+.stats-close{
+  background:none;border:1px solid var(--border);color:var(--muted);
+  width:28px;height:28px;border-radius:6px;cursor:pointer;font-size:1rem;
+  display:flex;align-items:center;justify-content:center;
+}
+.stats-close:hover{background:var(--danger);color:#fff;border-color:var(--danger)}
+.stats-days-sel{
+  background:var(--card);border:1px solid var(--border);color:var(--text);
+  padding:.25rem .6rem;border-radius:6px;font-size:.75rem;cursor:pointer;
+}
+/* KPI Cards */
+.stats-kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:.75rem;padding:1rem 1.4rem}
+.kpi-card{
+  background:var(--card);border:1px solid var(--border);border-radius:12px;
+  padding:.9rem 1rem;
+}
+.kpi-card .kpi-label{font-size:.68rem;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:.3rem}
+.kpi-card .kpi-val{font-size:1.5rem;font-weight:700;color:var(--white);line-height:1}
+.kpi-card .kpi-sub{font-size:.7rem;color:var(--muted);margin-top:.25rem}
+.kpi-card.kpi-oasis{border-color:var(--oasis-dim)}
+.kpi-card.kpi-dali{border-color:var(--dali-dim)}
+.kpi-card.kpi-purple{border-color:#7c3aed}
+/* Chart sections */
+.stats-section{padding:.5rem 1.4rem 1.2rem}
+.stats-section h3{font-size:.82rem;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;margin-bottom:.8rem;display:flex;align-items:center;gap:.5rem}
+.chart-box{
+  background:var(--card);border:1px solid var(--border);border-radius:12px;
+  padding:1.2rem;position:relative;
+}
+.chart-box canvas{max-height:280px}
+.chart-pair{display:grid;grid-template-columns:1fr 1fr;gap:.75rem}
+@media(max-width:600px){.chart-pair{grid-template-columns:1fr}}
+/* Ingredient frequency table */
+.ing-table{width:100%;border-collapse:collapse}
+.ing-table th{font-size:.68rem;color:var(--muted);text-align:left;padding:.4rem .5rem;border-bottom:1px solid var(--border)}
+.ing-table td{font-size:.78rem;padding:.45rem .5rem;border-bottom:1px solid #0e1f35}
+.ing-table tr:last-child td{border-bottom:none}
+.ing-bar{height:6px;border-radius:3px;background:var(--oasis);display:inline-block;vertical-align:middle;min-width:4px}
+.ing-bar.dali{background:var(--dali)}
+.ing-rank{color:var(--muted);font-size:.7rem;width:24px;text-align:right}
+/* AI Analysis box */
+.ai-box{
+  background:linear-gradient(135deg,#0f1830,#0a1020);
+  border:1px solid #2a1a5a;border-radius:14px;padding:1.2rem 1.4rem;
+}
+.ai-box .ai-head{display:flex;align-items:center;gap:.5rem;margin-bottom:.8rem}
+.ai-box .ai-head span{font-size:.75rem;font-weight:700;color:#a78bfa;text-transform:uppercase;letter-spacing:.07em}
+.ai-badge{font-size:.65rem;padding:.15rem .5rem;border-radius:20px;background:#1a0a3a;color:#a78bfa;border:1px solid #4a2a8a}
+.ai-resumen{font-size:.88rem;color:var(--white);line-height:1.6;margin-bottom:1rem}
+.ai-grid{display:grid;grid-template-columns:1fr 1fr;gap:.75rem;margin-bottom:1rem}
+@media(max-width:550px){.ai-grid{grid-template-columns:1fr}}
+.ai-insight{background:rgba(255,255,255,.04);border-radius:8px;padding:.7rem .9rem}
+.ai-insight .ai-rest{font-size:.68rem;color:var(--muted);margin-bottom:.3rem;text-transform:uppercase}
+.ai-insight p{font-size:.8rem;color:var(--text);line-height:1.5}
+.ai-pred{margin-bottom:.8rem}
+.ai-pred .ai-label{font-size:.68rem;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:.4rem}
+.ai-pred-pills{display:flex;flex-wrap:wrap;gap:.4rem}
+.ai-pred-pill{
+  background:#1a0a3a;border:1px solid #4a2a8a;color:#c4b5fd;
+  padding:.2rem .7rem;border-radius:20px;font-size:.75rem;
+}
+.ai-alerta{
+  background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.3);
+  border-radius:8px;padding:.6rem .9rem;font-size:.8rem;color:var(--warn);margin-bottom:.7rem;
+}
+.ai-alerta:empty{display:none}
+.ai-rec{
+  background:rgba(34,197,94,.07);border:1px solid rgba(34,197,94,.25);
+  border-radius:8px;padding:.6rem .9rem;font-size:.8rem;color:var(--green);
+}
+.ai-loading{text-align:center;padding:2rem;color:var(--muted);font-size:.85rem}
+.stats-trend-chip{
+  display:inline-flex;align-items:center;gap:.3rem;font-size:.7rem;font-weight:700;
+  padding:.2rem .6rem;border-radius:20px;
+}
+.trend-up{background:rgba(34,197,94,.12);color:var(--green);border:1px solid rgba(34,197,94,.3)}
+.trend-down{background:rgba(239,68,68,.12);color:var(--danger);border:1px solid rgba(239,68,68,.3)}
+.trend-stable{background:rgba(100,116,139,.12);color:#94a3b8;border:1px solid rgba(100,116,139,.3)}
 
 /* ── City Map ────────────────────────────────────────────────────── */
 #city{
@@ -700,6 +803,7 @@ body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,san
 }
 #caja-lightbox .lb-close:hover{opacity:1}
 </style>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
 </head>
 <body>
 
@@ -712,6 +816,7 @@ body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,san
     <span id="caja-live-cnt" class="caja-live-cnt"></span>
     <button class="btn-caja" onclick="openCaja()">💳 Caja</button>
     <button class="btn-compare" onclick="openCompare()">⚖ Almacenes</button>
+    <button class="btn-stats" onclick="openStats()">📊 Estadísticas</button>
   </div>
 </div>
 
@@ -1045,6 +1150,26 @@ body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,san
       <!-- JS fills this -->
     </div>
   </div>
+</div>
+
+<!-- ── Stats Panel ──────────────────────────────────────────────── -->
+<div id="stats-panel">
+  <div class="stats-header">
+    <h2>📊 Estadísticas del Negocio</h2>
+    <div class="stats-filter-btns">
+      <button class="stats-fbtn active" data-f="both"  onclick="setStatsFilter('both')">Ambos</button>
+      <button class="stats-fbtn"        data-f="oasis" onclick="setStatsFilter('oasis')">🌴 Oasis</button>
+      <button class="stats-fbtn"        data-f="dali"  onclick="setStatsFilter('dali')">🎨 Dali</button>
+    </div>
+    <select class="stats-days-sel" onchange="setStatsDays(this.value)">
+      <option value="7">7 días</option>
+      <option value="30" selected>30 días</option>
+      <option value="60">60 días</option>
+      <option value="90">90 días</option>
+    </select>
+    <button class="stats-close" onclick="closeStats()">✕</button>
+  </div>
+  <div id="stats-body"></div>
 </div>
 
 <script>
@@ -1777,6 +1902,443 @@ setInterval(async()=>{
     if(cajaCurrentShift!==null) renderCaja();
   }catch(e){}
 }, 30000);
+
+// ══════════════════════════════════════════════════════════════════
+// ESTADÍSTICAS
+// ══════════════════════════════════════════════════════════════════
+
+let statsData   = null;
+let statsFilter = 'both';     // 'both' | 'oasis' | 'dali'
+let statsDays   = 30;
+let _statsCharts= {};         // Chart.js instances
+
+function openStats(){
+  document.getElementById('stats-panel').style.display='block';
+  if(!statsData) loadStats();
+}
+function closeStats(){
+  document.getElementById('stats-panel').style.display='none';
+}
+
+async function loadStats(){
+  const panel = document.getElementById('stats-panel');
+  const body  = document.getElementById('stats-body');
+  body.innerHTML = '<div class="ai-loading">⏳ Cargando estadísticas…</div>';
+  try{
+    const [sResp, aiResp] = await Promise.all([
+      fetch(`/api/stats?days=${statsDays}`),
+      fetch('/api/stats/ai')
+    ]);
+    statsData    = await sResp.json();
+    const aiData = await aiResp.json();
+    renderStats(statsData, aiData);
+  }catch(e){
+    body.innerHTML = `<div class="ai-loading" style="color:var(--danger)">Error cargando estadísticas: ${e.message}</div>`;
+  }
+}
+
+function setStatsFilter(f){
+  statsFilter = f;
+  document.querySelectorAll('.stats-fbtn').forEach(b=>{
+    b.classList.toggle('active', b.dataset.f===f);
+  });
+  if(statsData) renderStats(statsData, null);
+}
+
+function setStatsDays(days){
+  statsDays = parseInt(days);
+  statsData = null;
+  loadStats();
+}
+
+function renderStats(data, aiData){
+  // Destruir charts previos
+  Object.values(_statsCharts).forEach(c=>{ try{c.destroy()}catch(e){} });
+  _statsCharts = {};
+
+  const body = document.getElementById('stats-body');
+
+  const showOasis = statsFilter !== 'dali';
+  const showDali  = statsFilter !== 'oasis';
+  const o = data.oasis;
+  const d = data.dali;
+
+  // ── KPIs combinados ─────────────────────────────────────────────
+  const totalMes     = (showOasis?o.kpis.mes_total:0) + (showDali?d.kpis.mes_total:0);
+  const totalHoy     = (showOasis?o.kpis.hoy_total:0) + (showDali?d.kpis.hoy_total:0);
+  const totalAlm     = (showOasis?o.kpis.mes_almuerzos:0) + (showDali?d.kpis.mes_almuerzos:0);
+  const avgDiario    = (showOasis?o.kpis.avg_diario:0) + (showDali?d.kpis.avg_diario:0);
+
+  const trendChip = (aiData && aiData.tendencia_30d)
+    ? `<span class="stats-trend-chip ${aiData.tendencia_30d==='sube'?'trend-up':aiData.tendencia_30d==='baja'?'trend-down':'trend-stable'}">
+        ${aiData.tendencia_30d==='sube'?'▲ Subiendo':aiData.tendencia_30d==='baja'?'▼ Bajando':'→ Estable'}
+       </span>` : '';
+
+  // ── HTML completo ─────────────────────────────────────────────
+  body.innerHTML = `
+  <div class="stats-kpis">
+    <div class="kpi-card kpi-purple">
+      <div class="kpi-label">Ingresos este mes</div>
+      <div class="kpi-val">Bs ${totalMes.toFixed(0)}</div>
+      <div class="kpi-sub">${trendChip}</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">Hoy</div>
+      <div class="kpi-val">Bs ${totalHoy.toFixed(0)}</div>
+      <div class="kpi-sub">ingresado hoy</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">Almuerzos / mes</div>
+      <div class="kpi-val">${totalAlm}</div>
+      <div class="kpi-sub">este mes</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">Promedio diario</div>
+      <div class="kpi-val">Bs ${avgDiario.toFixed(0)}</div>
+      <div class="kpi-sub">últimos ${statsDays} días</div>
+    </div>
+    ${showOasis?`<div class="kpi-card kpi-oasis">
+      <div class="kpi-label">🌴 Oasis — mes</div>
+      <div class="kpi-val">Bs ${o.kpis.mes_total.toFixed(0)}</div>
+      <div class="kpi-sub">mejor día Bs ${o.kpis.mejor_dia_total}</div>
+    </div>`:''}
+    ${showDali?`<div class="kpi-card kpi-dali">
+      <div class="kpi-label">🎨 Dali — mes</div>
+      <div class="kpi-val">Bs ${d.kpis.mes_total.toFixed(0)}</div>
+      <div class="kpi-sub">mejor día Bs ${d.kpis.mejor_dia_total}</div>
+    </div>`:''}
+  </div>
+
+  ${aiData ? _renderAiBox(aiData) : ''}
+
+  <!-- Ventas diarias -->
+  <div class="stats-section">
+    <h3>📈 Ventas diarias — últimos ${statsDays} días</h3>
+    <div class="chart-box"><canvas id="ch-ventas"></canvas></div>
+  </div>
+
+  <!-- Almuerzos + Capacidad -->
+  <div class="stats-section">
+    <h3>🍽 Almuerzos vendidos vs capacidad</h3>
+    <div class="chart-pair">
+      ${showOasis?'<div class="chart-box"><canvas id="ch-cap-oasis"></canvas></div>':''}
+      ${showDali ?'<div class="chart-box"><canvas id="ch-cap-dali"></canvas></div>':''}
+    </div>
+  </div>
+
+  <!-- Desglose por tipo -->
+  <div class="stats-section">
+    <h3>💰 Ingresos por categoría</h3>
+    <div class="chart-pair">
+      ${showOasis?'<div class="chart-box" style="max-width:320px;margin:0 auto"><canvas id="ch-tipo-oasis"></canvas></div>':''}
+      ${showDali ?'<div class="chart-box" style="max-width:320px;margin:0 auto"><canvas id="ch-tipo-dali"></canvas></div>':''}
+    </div>
+  </div>
+
+  <!-- Turnos -->
+  <div class="stats-section">
+    <h3>⏰ Mañana vs Noche — comprobantes</h3>
+    <div class="chart-pair">
+      ${showOasis?'<div class="chart-box" style="max-width:320px;margin:0 auto"><canvas id="ch-turno-oasis"></canvas></div>':''}
+      ${showDali ?'<div class="chart-box" style="max-width:320px;margin:0 auto"><canvas id="ch-turno-dali"></canvas></div>':''}
+    </div>
+  </div>
+
+  <!-- Comprobantes -->
+  <div class="stats-section">
+    <h3>✅ Estado de comprobantes</h3>
+    <div class="chart-pair">
+      ${showOasis?'<div class="chart-box" style="max-width:320px;margin:0 auto"><canvas id="ch-pay-oasis"></canvas></div>':''}
+      ${showDali ?'<div class="chart-box" style="max-width:320px;margin:0 auto"><canvas id="ch-pay-dali"></canvas></div>':''}
+    </div>
+  </div>
+
+  <!-- Ingredientes -->
+  <div class="stats-section">
+    <h3>🛒 Ingredientes más registrados como faltantes</h3>
+    ${_renderIngTable(data)}
+  </div>
+
+  <!-- Tendencia mensual -->
+  <div class="stats-section" style="padding-bottom:2rem">
+    <h3>📅 Ingresos mensuales</h3>
+    <div class="chart-box"><canvas id="ch-mensual"></canvas></div>
+  </div>
+  `;
+
+  // Renderizar todos los charts después de que el DOM esté listo
+  requestAnimationFrame(()=>_buildCharts(data));
+}
+
+function _renderAiBox(ai){
+  const preds = (ai.prediccion_ingredientes||[])
+    .map(p=>`<span class="ai-pred-pill">🛒 ${p}</span>`).join('');
+  const alertHtml = ai.alerta
+    ? `<div class="ai-alerta">⚠️ ${ai.alerta}</div>` : '';
+  const src = ai.source==='ia'
+    ? '<span class="ai-badge">✨ Claude IA</span>'
+    : '<span class="ai-badge" style="color:#94a3b8;border-color:#334155">📐 Reglas</span>';
+  return `
+  <div class="stats-section">
+    <div class="ai-box">
+      <div class="ai-head"><span>🤖 Análisis IA</span>${src}</div>
+      <p class="ai-resumen">${ai.resumen||''}</p>
+      <div class="ai-grid">
+        <div class="ai-insight"><div class="ai-rest">🌴 Oasis</div><p>${ai.oasis_insight||'—'}</p></div>
+        <div class="ai-insight"><div class="ai-rest">🎨 Dali</div><p>${ai.dali_insight||'—'}</p></div>
+      </div>
+      ${alertHtml}
+      <div class="ai-pred">
+        <div class="ai-label">🔮 Predicción — próximos ingredientes críticos</div>
+        <div class="ai-pred-pills">${preds}</div>
+        <p style="font-size:.72rem;color:var(--muted);margin-top:.4rem">${ai.prediccion_ingredientes_razon||''}</p>
+      </div>
+      <div class="ai-rec">💡 ${ai.recomendacion||''}</div>
+    </div>
+  </div>`;
+}
+
+function _renderIngTable(data){
+  // Combinar shortages de ambos restaurantes según filtro
+  const merge = {};
+  const addItems = (list, rest) => {
+    list.forEach(s=>{
+      const k = s.item_name;
+      if(!merge[k]) merge[k]={item_name:k,oasis:0,dali:0};
+      merge[k][rest] += s.veces;
+    });
+  };
+  if(statsFilter!=='dali') addItems(data.oasis.shortages,'oasis');
+  if(statsFilter!=='oasis') addItems(data.dali.shortages,'dali');
+
+  const items = Object.values(merge)
+    .map(i=>({...i, total:i.oasis+i.dali}))
+    .sort((a,b)=>b.total-a.total)
+    .slice(0,12);
+
+  if(!items.length) return '<p style="color:var(--muted);font-size:.8rem;padding:.5rem">Sin faltantes registrados en este período.</p>';
+
+  const maxV = items[0].total;
+  const rows = items.map((it,i)=>`
+    <tr>
+      <td class="ing-rank">${i+1}</td>
+      <td style="font-weight:600;color:var(--white)">${it.item_name}</td>
+      <td>
+        <span class="ing-bar" style="width:${Math.round(it.oasis/maxV*100)}px"></span>
+        ${it.oasis>0?`<span style="font-size:.7rem;color:var(--oasis);margin-left:.3rem">${it.oasis}×</span>`:''}
+      </td>
+      <td>
+        <span class="ing-bar dali" style="width:${Math.round(it.dali/maxV*100)}px"></span>
+        ${it.dali>0?`<span style="font-size:.7rem;color:var(--dali);margin-left:.3rem">${it.dali}×</span>`:''}
+      </td>
+      <td style="color:var(--warn);font-weight:700;font-size:.8rem">${it.total}×</td>
+    </tr>`).join('');
+
+  return `
+  <div class="chart-box" style="overflow-x:auto">
+    <table class="ing-table">
+      <thead><tr>
+        <th>#</th><th>Ingrediente</th>
+        <th>🌴 Oasis</th><th>🎨 Dali</th><th>Total</th>
+      </tr></thead>
+      <tbody>${rows}</tbody>
+    </table>
+  </div>`;
+}
+
+function _buildCharts(data){
+  const DARK  = {color:'#4a7090', borderColor:'#1e3a5f'};
+  const FONT  = {color:'#8ab0c8', size:11};
+  Chart.defaults.color       = '#8ab0c8';
+  Chart.defaults.borderColor = '#1e3a5f';
+
+  const o = data.oasis;
+  const d = data.dali;
+
+  // ── Ventas diarias (línea) ───────────────────────────────────────
+  const el_v = document.getElementById('ch-ventas');
+  if(el_v){
+    // Merge fechas oasis + dali
+    const allDates = [...new Set([
+      ...o.sales_by_day.map(r=>r.date),
+      ...d.sales_by_day.map(r=>r.date)
+    ])].sort();
+
+    const oMap = Object.fromEntries(o.sales_by_day.map(r=>[r.date,r.total]));
+    const dMap = Object.fromEntries(d.sales_by_day.map(r=>[r.date,r.total]));
+
+    const datasets = [];
+    if(statsFilter!=='dali') datasets.push({
+      label:'🌴 Oasis',
+      data: allDates.map(dt=>oMap[dt]||0),
+      borderColor:'#00e5a0', backgroundColor:'rgba(0,229,160,.1)',
+      tension:.35, fill:true, pointRadius:2,
+    });
+    if(statsFilter!=='oasis') datasets.push({
+      label:'🎨 Dali',
+      data: allDates.map(dt=>dMap[dt]||0),
+      borderColor:'#ff6b35', backgroundColor:'rgba(255,107,53,.1)',
+      tension:.35, fill:true, pointRadius:2,
+    });
+
+    _statsCharts['ventas'] = new Chart(el_v, {
+      type:'line',
+      data:{
+        labels: allDates.map(dt=>dt.slice(5)), // MM-DD
+        datasets,
+      },
+      options:{
+        responsive:true, maintainAspectRatio:true,
+        plugins:{legend:{labels:{font:{size:11}}}, tooltip:{mode:'index',intersect:false}},
+        scales:{
+          x:{ticks:{font:{size:10}, maxTicksLimit:15}, grid:{color:'#0e1f35'}},
+          y:{ticks:{font:{size:10}, callback:v=>`Bs${v}`}, grid:{color:'#0e1f35'}}
+        }
+      }
+    });
+  }
+
+  // ── Capacidad Oasis ─────────────────────────────────────────────
+  _buildCapChart('ch-cap-oasis', o.capacity, '#00e5a0', '🌴 Oasis');
+  _buildCapChart('ch-cap-dali',  d.capacity, '#ff6b35', '🎨 Dali');
+
+  // ── Desglose por tipo (donut) ────────────────────────────────────
+  _buildTipoChart('ch-tipo-oasis', o.sales_by_day, '🌴 Oasis');
+  _buildTipoChart('ch-tipo-dali',  d.sales_by_day, '🎨 Dali');
+
+  // ── Turnos (donut) ───────────────────────────────────────────────
+  _buildTurnoChart('ch-turno-oasis', o.shifts, '🌴 Oasis');
+  _buildTurnoChart('ch-turno-dali',  d.shifts, '🎨 Dali');
+
+  // ── Comprobantes (donut) ─────────────────────────────────────────
+  _buildPayChart('ch-pay-oasis', o.payments, '🌴 Oasis');
+  _buildPayChart('ch-pay-dali',  d.payments, '🎨 Dali');
+
+  // ── Mensual (barras) ─────────────────────────────────────────────
+  const el_m = document.getElementById('ch-mensual');
+  if(el_m){
+    const allMonths = [...new Set([
+      ...o.monthly.map(r=>r.month),
+      ...d.monthly.map(r=>r.month)
+    ])].sort();
+    const oMmap = Object.fromEntries(o.monthly.map(r=>[r.month,r.total]));
+    const dMmap = Object.fromEntries(d.monthly.map(r=>[r.month,r.total]));
+    const mDatasets = [];
+    if(statsFilter!=='dali') mDatasets.push({
+      label:'🌴 Oasis', data:allMonths.map(m=>oMmap[m]||0),
+      backgroundColor:'rgba(0,229,160,.6)', borderColor:'#00e5a0', borderWidth:1, borderRadius:4,
+    });
+    if(statsFilter!=='oasis') mDatasets.push({
+      label:'🎨 Dali', data:allMonths.map(m=>dMmap[m]||0),
+      backgroundColor:'rgba(255,107,53,.6)', borderColor:'#ff6b35', borderWidth:1, borderRadius:4,
+    });
+    _statsCharts['mensual'] = new Chart(el_m,{
+      type:'bar',
+      data:{labels:allMonths, datasets:mDatasets},
+      options:{
+        responsive:true, maintainAspectRatio:true,
+        plugins:{legend:{labels:{font:{size:11}}}},
+        scales:{
+          x:{ticks:{font:{size:10}}, grid:{color:'#0e1f35'}},
+          y:{ticks:{font:{size:10}, callback:v=>`Bs${v}`}, grid:{color:'#0e1f35'}}
+        }
+      }
+    });
+  }
+}
+
+function _buildCapChart(id, capData, color, label){
+  const el = document.getElementById(id);
+  if(!el || !capData.length) return;
+  _statsCharts[id] = new Chart(el,{
+    type:'bar',
+    data:{
+      labels: capData.map(r=>r.date.slice(5)),
+      datasets:[
+        {label:'Vendidos', data:capData.map(r=>r.vendidos), backgroundColor:color+'99', borderColor:color, borderWidth:1, borderRadius:3},
+        {label:'Capacidad',data:capData.map(r=>r.initial_qty),backgroundColor:'rgba(255,255,255,.05)',borderColor:'#1e3a5f',borderWidth:1,borderRadius:3},
+      ]
+    },
+    options:{
+      responsive:true, maintainAspectRatio:true,
+      plugins:{legend:{labels:{font:{size:10}}}, title:{display:true, text:label, font:{size:11}, color:'#8ab0c8'}},
+      scales:{
+        x:{ticks:{font:{size:9}, maxTicksLimit:12}, grid:{color:'#0e1f35'}},
+        y:{ticks:{font:{size:9}}, grid:{color:'#0e1f35'}}
+      }
+    }
+  });
+}
+
+function _buildTipoChart(id, salesData, label){
+  const el = document.getElementById(id);
+  if(!el) return;
+  const totAlm = salesData.reduce((s,r)=>s+(r.almuerzos||0),0);
+  const totExt = salesData.reduce((s,r)=>s+(r.extras||0),0);
+  const totRef = salesData.reduce((s,r)=>s+(r.refrescos||0),0);
+  if(!totAlm && !totExt && !totRef) return;
+  _statsCharts[id] = new Chart(el,{
+    type:'doughnut',
+    data:{
+      labels:['Almuerzos','Extras','Refrescos'],
+      datasets:[{data:[totAlm,totExt,totRef], backgroundColor:['#00e5a0','#3b82f6','#a78bfa'], borderColor:'#0f1e30', borderWidth:2}]
+    },
+    options:{
+      responsive:true, maintainAspectRatio:true, cutout:'62%',
+      plugins:{
+        legend:{position:'bottom', labels:{font:{size:10}, padding:8}},
+        title:{display:true, text:label, font:{size:11}, color:'#8ab0c8'}
+      }
+    }
+  });
+}
+
+function _buildTurnoChart(id, shifts, label){
+  const el = document.getElementById(id);
+  if(!el) return;
+  const man = shifts.manana||{cnt:0,total:0};
+  const noc = shifts.noche||{cnt:0,total:0};
+  if(!man.cnt && !noc.cnt) return;
+  _statsCharts[id] = new Chart(el,{
+    type:'doughnut',
+    data:{
+      labels:['☀️ Mañana','🌙 Noche'],
+      datasets:[{data:[man.total, noc.total], backgroundColor:['#f59e0b','#6366f1'], borderColor:'#0f1e30', borderWidth:2}]
+    },
+    options:{
+      responsive:true, maintainAspectRatio:true, cutout:'60%',
+      plugins:{
+        legend:{position:'bottom', labels:{font:{size:10}, padding:8}},
+        title:{display:true, text:label+` (${man.cnt+noc.cnt} comp.)`, font:{size:11}, color:'#8ab0c8'}
+      }
+    }
+  });
+}
+
+function _buildPayChart(id, payments, label){
+  const el = document.getElementById(id);
+  if(!el) return;
+  const v  = payments.verified||0;
+  const w  = payments.wrong_account||0;
+  const u  = payments.unreadable||0;
+  const p  = payments.pending||0;
+  if(!v && !w && !u && !p) return;
+  _statsCharts[id] = new Chart(el,{
+    type:'doughnut',
+    data:{
+      labels:['✅ Verificado','⚠ Cta. incorrecta','❓ Ilegible','⏳ Pendiente'],
+      datasets:[{data:[v,w,u,p], backgroundColor:['#22c55e','#ef4444','#94a3b8','#f59e0b'], borderColor:'#0f1e30', borderWidth:2}]
+    },
+    options:{
+      responsive:true, maintainAspectRatio:true, cutout:'60%',
+      plugins:{
+        legend:{position:'bottom', labels:{font:{size:9}, padding:6}},
+        title:{display:true, text:label+` (${payments.total_cnt} total)`, font:{size:11}, color:'#8ab0c8'}
+      }
+    }
+  });
+}
+
 </script>
 </body>
 </html>
