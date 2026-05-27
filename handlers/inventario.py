@@ -128,13 +128,27 @@ async def cmd_marcar_comprado(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
         )
 
 
-@require_role("kitchen_chief", "boss")
+@require_role("kitchen_chief", "supervisor", "boss")
 async def cmd_checklist(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
     """Planilla de cierre de turno: muestra todo lo de HOY (pendiente + comprado)."""
     rid   = ctx.user_data["restaurant_id"]
     rname = ctx.user_data["restaurant_name"]
-    today = db.today()
+    role  = ctx.user_data["role"]
 
+    # Boss without restaurant arg → show both
+    if role == "boss" and not rid:
+        msgs = []
+        for name in ["oasis", "dali"]:
+            rest = db.get_restaurant(name)
+            msgs.append(_build_checklist(rest["id"], name))
+        await update.message.reply_text("\n\n".join(msgs), parse_mode="Markdown")
+        return
+
+    await update.message.reply_text(_build_checklist(rid, rname), parse_mode="Markdown")
+
+
+def _build_checklist(rid: int, rname: str) -> str:
+    today = db.today()
     all_today = db.get_all_shortages_today(rid)
     pending = [i for i in all_today if i["status"] == "pending"]
     bought  = [i for i in all_today if i["status"] == "bought"]
@@ -145,8 +159,9 @@ async def cmd_checklist(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
     if pending:
         lines.append(f"🔴 *Pendiente de comprar ({len(pending)}):*")
         for item in pending:
-            lines.append(f"  ☐ {item['item_name']} — {item['quantity_needed']}")
-            lines.append(f"     _Registrado por {item['updated_by']}_")
+            by = item['updated_by']
+            by_note = f"  _por {by}_" if by and by.lower() != "sistema" else ""
+            lines.append(f"  ☐ {item['item_name']} — {item['quantity_needed']}{by_note}")
 
     if bought:
         lines.append(f"\n🟢 *Ya comprado hoy ({len(bought)}):*")
@@ -164,16 +179,24 @@ async def cmd_checklist(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
 
     lines.append("\n_/agregar\\_faltante Ítem | Cantidad_")
     lines.append("_/marcar\\_comprado Ítem_")
+    return "\n".join(lines)
 
-    await update.message.reply_text("\n".join(lines), parse_mode="Markdown")
 
-
-@require_role("kitchen_chief", "boss")
+@require_role("kitchen_chief", "supervisor", "boss")
 async def cmd_stock_ok(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
     """Confirma que el stock del día está completo."""
     rid   = ctx.user_data["restaurant_id"]
     rname = ctx.user_data["restaurant_name"]
+    role  = ctx.user_data["role"]
     user  = ctx.user_data.get("username") or update.effective_user.full_name
+
+    if role == "boss" and not rid:
+        await update.message.reply_text(
+            "👑 Especifica el restaurante:\n"
+            "`/stock_ok oasis` o `/stock_ok dali`",
+            parse_mode="Markdown"
+        )
+        return
 
     # Solo mira pendientes de HOY
     all_today = db.get_all_shortages_today(rid)

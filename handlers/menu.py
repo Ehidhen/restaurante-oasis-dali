@@ -35,7 +35,7 @@ def _format_menu(menu, rname: str) -> str:
         f"🍲 Sopa: {menu['soup'] or '—'}\n"
         f"🍽 Plato: {menu['main_dish'] or '—'}\n"
         f"🥤 Refresco: {menu['drink'] or '—'}\n"
-        f"💰 Precio: ${menu['price']:.2f}\n"
+        f"💰 Precio: Bs {menu['price']:.2f}\n"
         f"🔢 Almuerzos: *{qty}* restantes\n"
         f"Estado: {estado}"
     )
@@ -70,13 +70,14 @@ async def cmd_definir_menu(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text("❌ El precio debe ser un número y la cantidad un entero.")
         return
 
-    db.set_menu(rid, soup, main_dish, drink, price, initial_qty)
+    user = ctx.user_data.get("username") or update.effective_user.full_name
+    db.set_menu(rid, soup, main_dish, drink, price, initial_qty, updated_by=user)
     await update.message.reply_text(
         f"✅ Menú guardado para {rest_label(rname)}\n\n"
         f"🍲 Sopa: {soup}\n"
         f"🍽 Plato: {main_dish}\n"
         f"🥤 Refresco: {drink}\n"
-        f"💰 Precio: ${price:.2f}\n"
+        f"💰 Precio: Bs {price:.2f}\n"
         f"🔢 Cantidad inicial: {initial_qty}",
         parse_mode="Markdown"
     )
@@ -110,7 +111,7 @@ async def cmd_agregar_extra(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
     db.add_extra_dish(rid, name_dish, price)
     await update.message.reply_text(
         f"✅ Plato extra agregado en {rest_label(rname)}\n"
-        f"🍴 {name_dish} — ${price:.2f}"
+        f"🍴 {name_dish} — Bs {price:.2f}"
     )
 
 
@@ -122,7 +123,7 @@ async def cmd_precio(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
 
     if not ctx.args:
         menu = db.get_menu(rid)
-        current = f"${menu['price']:.2f}" if menu else "no definido"
+        current = f"Bs {menu['price']:.2f}" if menu else "no definido"
         await update.message.reply_text(
             f"💰 Precio actual en {rest_label(rname)}: {current}\n"
             f"Para cambiar: `/precio 8.50`",
@@ -144,6 +145,6 @@ async def cmd_precio(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
 
     db.set_menu_price(rid, price)
     await update.message.reply_text(
-        f"✅ Precio actualizado en {rest_label(rname)}: *${price:.2f}*",
+        f"✅ Precio actualizado en {rest_label(rname)}: *Bs {price:.2f}*",
         parse_mode="Markdown"
     )

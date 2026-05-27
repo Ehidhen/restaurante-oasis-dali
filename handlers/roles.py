@@ -45,7 +45,14 @@ def _get_user_context(telegram_id: str) -> tuple[str, str, int | None]:
 
 
 def require_role(*allowed_roles):
-    """Decorator: only allows users whose role is in allowed_roles."""
+    """Decorator: only allows users whose role is in allowed_roles.
+
+    For the 'boss' role with no assigned restaurant (rid=None), the
+    decorator inspects ctx.args for an optional leading 'oasis'/'dali'
+    token and routes the command to that restaurant automatically,
+    removing the token so the command handler sees clean arguments.
+    Example: /checklist dali  →  cmd_checklist runs as if boss is in Dali.
+    """
     def decorator(func):
         @wraps(func)
         async def wrapper(update: Update, ctx: ContextTypes.DEFAULT_TYPE, *args, **kwargs):
@@ -64,9 +71,20 @@ def require_role(*allowed_roles):
                     parse_mode="Markdown"
                 )
                 return
-            ctx.user_data["role"] = role
+
+            # Boss without a fixed restaurant: try to resolve from first arg
+            if role == "boss" and rid is None:
+                first = (ctx.args[0].lower().strip() if ctx.args else "")
+                if first in ("oasis", "dali"):
+                    rest_override = db.get_restaurant(first)
+                    if rest_override:
+                        rest_name = first
+                        rid       = rest_override["id"]
+                        ctx.args  = list(ctx.args[1:])  # consume the token
+
+            ctx.user_data["role"]            = role
             ctx.user_data["restaurant_name"] = rest_name
-            ctx.user_data["restaurant_id"] = rid
+            ctx.user_data["restaurant_id"]   = rid
             ctx.user_data["username"] = (
                 update.effective_user.full_name
                 or update.effective_user.first_name

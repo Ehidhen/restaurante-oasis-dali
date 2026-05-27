@@ -10,10 +10,19 @@ async def cmd_transferir(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
     """
     Solicita N almuerzos del otro restaurante.
     Uso: /transferir <cantidad>
+    Boss: /transferir oasis 10  (pide 10 almuerzos para Oasis)
     """
     rid = ctx.user_data["restaurant_id"]
     rname = ctx.user_data["restaurant_name"]
     uid = str(update.effective_user.id)
+
+    if not rid:
+        await update.message.reply_text(
+            "👑 Especifica el restaurante que necesita los almuerzos:\n"
+            "`/transferir oasis 10` o `/transferir dali 10`",
+            parse_mode="Markdown"
+        )
+        return
 
     if not ctx.args:
         await update.message.reply_text(

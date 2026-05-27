@@ -16,7 +16,8 @@ async def cmd_overview(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
         menu = db.get_menu(rest["id"])
         qty = db.get_current_qty(rest["id"])
         summary = db.get_daily_summary(rest["id"])
-        shortages = db.get_shortages(rest["id"])
+        shortages_today = db.get_all_shortages_today(rest["id"])
+        pending_shortages = [s for s in shortages_today if s["status"] == "pending"]
         transfers = db.get_today_transfers(rest["id"])
 
         alm_qty, alm_tot = summary.get("almuerzo", (0, 0.0))
@@ -29,12 +30,12 @@ async def cmd_overview(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
             f"Estado: {estado}",
         ]
         if menu:
-            s.append(f"Menú: {menu['main_dish'] or '—'} | ${menu['price']:.2f}")
-        s.append(f"Vendidos hoy: {alm_qty} almuerzos — ${total:.2f}")
-        if shortages:
-            s.append(f"Faltantes: {len(shortages)} ítems pendientes")
+            s.append(f"Menú: {menu['main_dish'] or '—'} | Bs {menu['price']:.2f}")
+        s.append(f"Vendidos hoy: {alm_qty} almuerzos — Bs {total:.2f}")
+        if pending_shortages:
+            s.append(f"🛒 Faltantes hoy: {len(pending_shortages)} pendiente(s)")
         if transfers:
-            s.append(f"Transferencias hoy: {len(transfers)}")
+            s.append(f"↔️ Transferencias hoy: {len(transfers)}")
 
         sections.append("\n".join(s))
 
@@ -47,7 +48,7 @@ async def cmd_overview(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
         f"{'═' * 32}\n\n" +
         "\n\n".join(sections) +
         f"\n\n{'─' * 32}\n"
-        f"💰 *Total combinado hoy: ${grand:.2f}*\n\n"
+        f"💰 *Total combinado hoy: Bs {grand:.2f}*\n\n"
         f"🌐 Panel web: {config.WEB_URL}"
     )
     await update.message.reply_text(msg, parse_mode="Markdown")
@@ -81,60 +82,91 @@ async def cmd_start(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
 
     commands_by_role = {
         "boss": (
+            "📊 *Reportes*\n"
             "/overview — Vista completa de ambos restaurantes\n"
-            "/menu_hoy — Menú del día\n"
-            "/quedan — Almuerzos disponibles\n"
             "/resumen_hoy — Ventas del día\n"
             "/resumen_semana — Resumen semanal\n"
-            "/comparar — Comparativa Oasis vs Dali\n"
-            "/faltantes — Lista de faltantes\n"
-            "/comprobantes_dia YYYY-MM-DD — Comprobantes de un día"
+            "/comparar — Comparativa Oasis vs Dali\n\n"
+            "🍽 *Menú / Stock*\n"
+            "/menu_hoy — Menú del día\n"
+            "/quedan — Almuerzos disponibles\n"
+            "/faltantes — Faltantes de hoy\n\n"
+            "💳 *Pagos*\n"
+            "/ver_pagos oasis — Comprobantes hoy Oasis\n"
+            "/ver_pagos dali — Comprobantes hoy Dali\n"
+            "/comprobantes_dia YYYY-MM-DD [oasis|dali]\n\n"
+            "🌐 Panel web: " + config.WEB_URL
         ),
         "supervisor": (
+            "📋 *Ver estado*\n"
             "/menu_hoy — Menú del día\n"
             "/quedan — Almuerzos disponibles\n"
             "/resumen_hoy — Ventas del día\n"
-            "/faltantes — Faltantes pendientes\n"
+            "/faltantes — Faltantes pendientes hoy\n"
+            "/ver_promos — Promos activas\n\n"
+            "🛒 *Inventario*\n"
             "/agregar_faltante Ítem | Cantidad\n"
-            "/transferir N — Solicitar almuerzos\n"
-            "/confirmar_envio — Confirmar envío\n"
-            "/confirmar_llegada — Confirmar llegada\n"
-            "/ver_pagos — Ver comprobantes hoy\n"
+            "/marcar_comprado Ítem\n"
+            "/checklist — Checklist fin de turno\n\n"
+            "↔️ *Transferencias*\n"
+            "/transferir N — Solicitar N almuerzos del otro restaurante\n"
+            "/confirmar_envio — Confirmar que salieron\n"
+            "/confirmar_llegada — Confirmar que llegaron\n\n"
+            "💳 *Pagos*\n"
+            "/ver_pagos — Comprobantes de hoy\n"
+            "/cerrar_caja — Resumen del turno actual\n"
+            "/cerrar_caja manana — Ver turno mañana\n"
+            "/cerrar_caja noche — Ver turno noche\n"
             "/comprobantes_dia YYYY-MM-DD — Comprobantes de un día"
         ),
         "kitchen_chief": (
+            "🍽 *Menú*\n"
             "/definir_menu Sopa | Plato | Refresco | Precio | Cantidad\n"
             "/agregar_extra Nombre | Precio\n"
-            "/precio N — Cambiar precio del almuerzo\n"
+            "/precio N — Cambiar precio del almuerzo\n\n"
+            "🔢 *Stock*\n"
             "/quedan — Almuerzos disponibles\n"
             "/ajustar N — Corregir contador\n"
-            "/sin_almuerzos — Marcar agotado\n"
-            "/faltantes — Ver faltantes\n"
+            "/sin_almuerzos — Marcar agotado\n\n"
+            "🛒 *Inventario (turno)*\n"
+            "/faltantes — Ver faltantes de hoy\n"
             "/agregar_faltante Ítem | Cantidad\n"
+            "/agregar_faltante Ítem   ← sin cantidad\n"
             "/marcar_comprado Ítem\n"
-            "/checklist — Checklist fin de turno\n"
-            "/stock_ok — Confirmar stock completo\n"
-            "/transferir N — Solicitar/enviar almuerzos\n"
+            "/checklist — Planilla fin de turno\n"
+            "/stock_ok — Confirmar stock completo\n\n"
+            "↔️ *Transferencias*\n"
+            "/transferir N — Solicitar almuerzos\n"
             "/confirmar_envio — Confirmar envío\n"
             "/confirmar_llegada — Confirmar llegada"
         ),
         "cashier": (
+            "🍽 *Ventas*\n"
             "/menu_hoy — Ver menú del día\n"
             "/quedan — Almuerzos disponibles\n"
             "/venta — Registrar 1 almuerzo\n"
             "/venta N — Registrar N almuerzos\n"
-            "/resumen_hoy — Ventas del día\n"
-            "/registrar_pago [monto] [desc] — Registrar comprobante\n"
-            "/ver_pagos — Ver comprobantes hoy\n"
-            "/cerrar_caja — Resumen del turno"
+            "/resumen_hoy — Ventas del día\n\n"
+            "💳 *Caja*\n"
+            "/registrar_pago [monto] [desc] — Foto comprobante QR\n"
+            "/ver_pagos — Comprobantes de hoy\n"
+            "/cerrar_caja — Resumen turno actual\n"
+            "/cerrar_caja manana — Ver turno mañana\n"
+            "/cerrar_caja noche — Ver turno noche\n"
+            "/comprobantes_dia YYYY-MM-DD — Histórico de un día"
         ),
         "mesero": (
-            "/mi_restaurante — Ver/cambiar restaurante actual\n"
-            "/mi_restaurante oasis — Trabajar en Oasis hoy\n"
-            "/mi_restaurante dali — Trabajar en Dali hoy\n"
-            "/registrar_pago [monto] [desc] — Registrar comprobante QR\n"
+            "🏠 *Restaurante*\n"
+            "/mi_restaurante — Ver dónde estás trabajando\n"
+            "/mi_restaurante oasis — Cambiar a Oasis\n"
+            "/mi_restaurante dali — Cambiar a Dali\n\n"
+            "💳 *Pagos QR*\n"
+            "/registrar_pago [monto] [desc] — Registrar comprobante\n"
+            "/comprobantes_dia YYYY-MM-DD — Tus comprobantes de ese día\n\n"
+            "🍽 *Info*\n"
             "/menu_hoy — Ver menú del día\n"
-            "/quedan — Almuerzos disponibles"
+            "/quedan — Almuerzos disponibles\n"
+            "/ver_promos — Promos activas"
         ),
     }
 

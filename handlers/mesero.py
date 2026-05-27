@@ -119,13 +119,33 @@ async def cmd_comprobantes_dia(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
         return
 
     # El dueño puede pedir cualquier restaurante
-    if target_rest and role == "boss":
-        rest = db.get_restaurant(target_rest)
-        if not rest:
-            await update.message.reply_text("❌ Restaurante no encontrado.")
+    if role == "boss":
+        if target_rest:
+            rest = db.get_restaurant(target_rest)
+            if not rest:
+                await update.message.reply_text("❌ Restaurante no encontrado.")
+                return
+            rid   = rest["id"]
+            rname = target_rest
+        elif not rid:
+            # Boss sin restaurante y sin arg → mostrar ambos
+            msgs = []
+            for name in ["oasis", "dali"]:
+                rest = db.get_restaurant(name)
+                p = db.get_payments_by_date(rest["id"], date_str)
+                if p:
+                    total = sum(x["amount"] or 0 for x in p)
+                    msgs.append(
+                        f"{rest_label(name)} — {date_str}: "
+                        f"{len(p)} comprobante(s) · Bs {total:.2f}"
+                    )
+                else:
+                    msgs.append(f"{rest_label(name)} — {date_str}: sin comprobantes")
+            await update.message.reply_text(
+                "\n".join(msgs) + "\n\nUsa `/comprobantes_dia " + date_str + " oasis` para ver detalle.",
+                parse_mode="Markdown"
+            )
             return
-        rid   = rest["id"]
-        rname = target_rest
 
     pagos = db.get_payments_by_date(rid, date_str)
 

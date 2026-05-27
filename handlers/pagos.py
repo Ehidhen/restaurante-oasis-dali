@@ -184,28 +184,38 @@ async def handle_comprobante_photo(update: Update, ctx: ContextTypes.DEFAULT_TYP
 async def cmd_ver_pagos(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
     rid   = ctx.user_data["restaurant_id"]
     rname = ctx.user_data["restaurant_name"]
-
+    role  = ctx.user_data["role"]
     today = db.today()
+
+    # Boss without restaurant arg → show both
+    if role == "boss" and not rid:
+        msgs = []
+        for name in ["oasis", "dali"]:
+            rest = db.get_restaurant(name)
+            msgs.append(_format_pagos_hoy(rest["id"], name, today))
+        await update.message.reply_text("\n\n".join(msgs), parse_mode="Markdown")
+        return
+
+    await update.message.reply_text(_format_pagos_hoy(rid, rname, today), parse_mode="Markdown")
+
+
+def _format_pagos_hoy(rid: int, rname: str, today: str) -> str:
     pagos = db.get_payments_by_date(rid, today)
     if not pagos:
-        await update.message.reply_text(
-            f"{rest_label(rname)}\n📅 {today}\n❌ Sin comprobantes hoy."
-        )
-        return
+        return f"{rest_label(rname)}\n📅 {today}\n❌ Sin comprobantes hoy."
 
     icons = {"verified": "✅", "wrong_account": "⚠️", "unreadable": "❓", "pending": "⏳"}
     lines = [f"{rest_label(rname)} — Comprobantes de hoy ({today})\n"]
     total = 0.0
     for p in pagos:
-        t = p["registered_at"][11:16] if p["registered_at"] else "—"
-        icon = icons.get(p["verification_status"], "⏳")
+        t     = p["registered_at"][11:16] if p["registered_at"] else "—"
+        icon  = icons.get(p["verification_status"], "⏳")
         turno = "☀️" if (p["shift"] or "") == "manana" else "🌙"
-        amt = f"Bs {p['amount']:.2f}"
         total += p["amount"] or 0
-        lines.append(f"{turno}{icon} #{p['id']} {t} — *{amt}* {p['cashier_name']}")
+        lines.append(f"{turno}{icon} #{p['id']} {t} — *Bs {p['amount']:.2f}* {p['cashier_name']}")
 
     lines.append(f"\n💰 Total: *Bs {total:.2f}*")
-    await update.message.reply_text("\n".join(lines), parse_mode="Markdown")
+    return "\n".join(lines)
 
 
 # ── Cerrar caja ───────────────────────────────────────────────────────────────
@@ -213,12 +223,15 @@ async def cmd_ver_pagos(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
 @require_role("cashier", "supervisor", "boss")
 async def cmd_cerrar_caja(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
     """
-    /cerrar_caja          — Resumen del turno actual.
-    /cerrar_caja manana   — Ver turno mañana (aunque ya sea noche).
-    /cerrar_caja noche    — Ver turno noche.
+    /cerrar_caja             — Resumen del turno actual.
+    /cerrar_caja manana      — Ver turno mañana.
+    /cerrar_caja noche       — Ver turno noche.
+    /cerrar_caja oasis       — Boss: ver turno actual de Oasis.
+    /cerrar_caja dali noche  — Boss: ver turno noche de Dali.
     """
     rid   = ctx.user_data["restaurant_id"]
     rname = ctx.user_data["restaurant_name"]
+    role  = ctx.user_data["role"]
 
     # Shift from argument or auto-detect
     arg = (ctx.args[0].lower().strip() if ctx.args else "").replace("ñ", "n")
@@ -229,16 +242,28 @@ async def cmd_cerrar_caja(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
     else:
         shift = get_current_shift()
 
+    # Boss without restaurant → show both restaurants
+    if role == "boss" and not rid:
+        msgs = []
+        for name in ["oasis", "dali"]:
+            rest = db.get_restaurant(name)
+            msgs.append(_build_cierre(rest["id"], name, shift))
+        await update.message.reply_text("\n\n".join(msgs), parse_mode="Markdown")
+        return
+
+    await update.message.reply_text(_build_cierre(rid, rname, shift), parse_mode="Markdown")
+
+
+def _build_cierre(rid: int, rname: str, shift: str) -> str:
     pagos = db.get_payments_by_shift(rid, shift)
 
-    verified      = [p for p in pagos if p["verification_status"] == "verified"]
-    wrong         = [p for p in pagos if p["verification_status"] == "wrong_account"]
-    unreadable    = [p for p in pagos if p["verification_status"] == "unreadable"]
-    pending       = [p for p in pagos if p["verification_status"] == "pending"]
+    verified   = [p for p in pagos if p["verification_status"] == "verified"]
+    wrong      = [p for p in pagos if p["verification_status"] == "wrong_account"]
+    unreadable = [p for p in pagos if p["verification_status"] == "unreadable"]
+    pending    = [p for p in pagos if p["verification_status"] == "pending"]
 
     total_all      = sum(p["amount"] or 0 for p in pagos)
     total_verified = sum(p["amount"] or 0 for p in verified)
-
     can_close = len(wrong) == 0 and len(unreadable) == 0 and len(pending) == 0
 
     lines = [
@@ -249,23 +274,22 @@ async def cmd_cerrar_caja(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
         f"  ⚠️ Cuenta incorrecta: {len(wrong)}",
         f"  ❓ Ilegibles: {len(unreadable)}",
         f"  ⏳ Pendientes: {len(pending)}",
-        f"\n💰 *Total comprobantes: Bs {total_all:.2f}*",
-        f"📝 *Total comprobantes: {len(pagos)}*\n",
+        f"\n💰 *Total: Bs {total_all:.2f}*  ·  {len(pagos)} comprobante(s)\n",
     ]
 
     if wrong:
         lines.append("⚠️ *Comprobantes con cuenta incorrecta:*")
         for p in wrong:
-            t = p["registered_at"][11:16]
+            t = (p["registered_at"] or "")[11:16]
             lines.append(f"  #{p['id']} {t} Bs {p['amount']:.2f} — {p['cashier_name']}")
             if p["extracted_account"]:
                 lines.append(f"  Cuenta detectada: `{p['extracted_account']}`")
         lines.append("")
 
     if unreadable:
-        lines.append("❓ *Comprobantes ilegibles (verificar manualmente):*")
+        lines.append("❓ *Comprobantes ilegibles (revisar manualmente):*")
         for p in unreadable:
-            t = p["registered_at"][11:16]
+            t = (p["registered_at"] or "")[11:16]
             lines.append(f"  #{p['id']} {t} Bs {p['amount']:.2f} — {p['cashier_name']}")
         lines.append("")
 
@@ -273,9 +297,9 @@ async def cmd_cerrar_caja(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
         lines.append("✅ *Todo en orden — caja puede cerrarse.*")
     else:
         lines.append("🚫 *Caja NO puede cerrarse aún.*")
-        lines.append("Resuelve los comprobantes marcados con ⚠️ o ❓ primero.")
+        lines.append("Resuelve los ⚠️ o ❓ primero.")
 
-    await update.message.reply_text("\n".join(lines), parse_mode="Markdown")
+    return "\n".join(lines)
 
 
 # ── Cancelar ─────────────────────────────────────────────────────────────────

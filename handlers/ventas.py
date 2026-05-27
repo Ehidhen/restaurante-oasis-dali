@@ -122,7 +122,7 @@ async def cmd_venta(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
 
     msg = (
         f"✅ Venta registrada — {rest_label(rname)}\n"
-        f"🍽 {n} almuerzo(s) × ${price:.2f} = *${amount:.2f}*\n"
+        f"🍽 {n} almuerzo(s) × Bs {price:.2f} = *Bs {amount:.2f}*\n"
         f"🔢 Quedan: *{new_qty}* {bar}"
     )
     await update.message.reply_text(msg, parse_mode="Markdown")
@@ -135,6 +135,13 @@ async def cmd_ajustar(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
     """Uso: /ajustar 45  — corrige manualmente el contador."""
     rid = ctx.user_data["restaurant_id"]
     rname = ctx.user_data["restaurant_name"]
+
+    if not rid:
+        await update.message.reply_text(
+            "👑 Especifica el restaurante:\n`/ajustar oasis 45` o `/ajustar dali 45`",
+            parse_mode="Markdown"
+        )
+        return
 
     if not ctx.args:
         qty = db.get_current_qty(rid)
@@ -165,6 +172,13 @@ async def cmd_ajustar(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
 async def cmd_sin_almuerzos(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
     rid = ctx.user_data["restaurant_id"]
     rname = ctx.user_data["restaurant_name"]
+
+    if not rid:
+        await update.message.reply_text(
+            "👑 Especifica el restaurante:\n`/sin_almuerzos oasis` o `/sin_almuerzos dali`",
+            parse_mode="Markdown"
+        )
+        return
 
     db.set_qty(rid, 0)
     await update.message.reply_text(
