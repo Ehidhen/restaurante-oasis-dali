@@ -6,6 +6,7 @@ from handlers.roles import any_role, require_role, rest_label
 
 @any_role
 async def cmd_faltantes(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
+    """Muestra faltantes de HOY (pendientes)."""
     role = ctx.user_data["role"]
     rname = ctx.user_data["restaurant_name"]
 
@@ -13,14 +14,16 @@ async def cmd_faltantes(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
         msgs = []
         for name in ["oasis", "dali"]:
             rest = db.get_restaurant(name)
-            items = db.get_shortages(rest["id"])
-            msgs.append(_format_shortages(items, name))
+            items = db.get_all_shortages_today(rest["id"])
+            pending = [i for i in items if i["status"] == "pending"]
+            msgs.append(_format_shortages(pending, name))
         await update.message.reply_text("\n\n".join(msgs), parse_mode="Markdown")
         return
 
     rid = ctx.user_data["restaurant_id"]
-    items = db.get_shortages(rid)
-    await update.message.reply_text(_format_shortages(items, rname), parse_mode="Markdown")
+    items = db.get_all_shortages_today(rid)
+    pending = [i for i in items if i["status"] == "pending"]
+    await update.message.reply_text(_format_shortages(pending, rname), parse_mode="Markdown")
 
 
 def _format_shortages(items: list, rname: str) -> str:
@@ -92,51 +95,76 @@ async def cmd_marcar_comprado(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
 
 @require_role("kitchen_chief", "boss")
 async def cmd_checklist(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
-    rid = ctx.user_data["restaurant_id"]
+    """Planilla de cierre de turno: muestra todo lo de HOY (pendiente + comprado)."""
+    rid   = ctx.user_data["restaurant_id"]
     rname = ctx.user_data["restaurant_name"]
+    today = db.today()
 
-    pending = db.get_shortages(rid, "pending")
-    bought = db.get_shortages(rid, "bought")
+    all_today = db.get_all_shortages_today(rid)
+    pending = [i for i in all_today if i["status"] == "pending"]
+    bought  = [i for i in all_today if i["status"] == "bought"]
 
-    lines = [f"📋 *Checklist fin de turno — {rest_label(rname)}*\n"]
+    lines = [f"📋 *Planilla cierre de turno — {rest_label(rname)}*",
+             f"📅 {today}\n"]
 
     if pending:
-        lines.append("🔴 *Pendientes de comprar:*")
+        lines.append(f"🔴 *Pendiente de comprar ({len(pending)}):*")
         for item in pending:
             lines.append(f"  ☐ {item['item_name']} — {item['quantity_needed']}")
+            lines.append(f"     _Registrado por {item['updated_by']}_")
 
     if bought:
-        lines.append("\n🟢 *Ya comprado hoy:*")
+        lines.append(f"\n🟢 *Ya comprado hoy ({len(bought)}):*")
         for item in bought:
-            lines.append(f"  ☑ {item['item_name']}")
+            lines.append(f"  ☑ ~~{item['item_name']}~~")
 
     if not pending and not bought:
-        lines.append("✅ Sin faltantes registrados. ¿Todo completo?\nUsa /stock_ok para confirmar.")
+        lines.append("✅ Sin faltantes registrados hoy.\nUsa /stock\\_ok para confirmar stock.")
 
-    lines.append("\nUsa /agregar_faltante para agregar ítems.")
-    lines.append("Usa /stock_ok cuando todo esté completo.")
+    if pending:
+        lines.append(f"\n⏳ Quedan {len(pending)} pendiente(s).")
+        lines.append("Usa /stock\\_ok cuando todo esté comprado.")
+    else:
+        lines.append("\n✅ Todo comprado. Usa /stock\\_ok para confirmar.")
+
+    lines.append("\n_/agregar\\_faltante Ítem | Cantidad_")
+    lines.append("_/marcar\\_comprado Ítem_")
 
     await update.message.reply_text("\n".join(lines), parse_mode="Markdown")
 
 
 @require_role("kitchen_chief", "boss")
 async def cmd_stock_ok(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
-    rid = ctx.user_data["restaurant_id"]
+    """Confirma que el stock del día está completo."""
+    rid   = ctx.user_data["restaurant_id"]
     rname = ctx.user_data["restaurant_name"]
+    user  = ctx.user_data.get("username") or update.effective_user.full_name
 
-    pending = db.get_shortages(rid, "pending")
+    # Solo mira pendientes de HOY
+    all_today = db.get_all_shortages_today(rid)
+    pending   = [i for i in all_today if i["status"] == "pending"]
+
     if pending:
-        items_str = "\n".join(f"• {i['item_name']}" for i in pending)
+        items_str = "\n".join(f"  • {i['item_name']} — {i['quantity_needed']}" for i in pending)
         await update.message.reply_text(
-            f"⚠️ Aún hay {len(pending)} ítems pendientes en {rest_label(rname)}:\n\n"
+            f"⚠️ Aún hay *{len(pending)}* ítem(s) pendiente(s) en {rest_label(rname)}:\n\n"
             f"{items_str}\n\n"
-            f"Usa /marcar_comprado <ítem> para marcarlos o agréga nuevos con /agregar_faltante.",
+            f"Marca cada uno con `/marcar_comprado Ítem` cuando lo compren.\n"
+            f"O usa `/stock_ok` de nuevo cuando estén todos.",
             parse_mode="Markdown"
         )
         return
 
+    bought = [i for i in all_today if i["status"] == "bought"]
+    resumen = ""
+    if bought:
+        resumen = "\n📦 Comprado hoy:\n" + "\n".join(f"  ✅ {i['item_name']}" for i in bought)
+
     await update.message.reply_text(
-        f"✅ *Stock confirmado* en {rest_label(rname)}.\n"
-        f"Todo en orden para mañana. ¡Buen trabajo!",
+        f"✅ *Stock OK* — {rest_label(rname)}\n"
+        f"Confirmado por: {user}\n"
+        f"📅 {db.today()}"
+        f"{resumen}\n\n"
+        f"¡Todo listo para mañana! 🎉",
         parse_mode="Markdown"
     )
