@@ -68,9 +68,16 @@ async def job_reporte_matutino(ctx: ContextTypes.DEFAULT_TYPE):
 
 
 async def job_cierre_turno(ctx: ContextTypes.DEFAULT_TYPE):
-    """10:00 PM — Recordar al jefe de cocina el checklist de faltantes."""
+    """10:00 PM — Recordar al jefe de cocina Y enviar planilla a supervisoras."""
     for rest_name in ["oasis", "dali"]:
-        msg = (
+        rest     = db.get_restaurant(rest_name)
+        today    = db.today()
+        all_hoy  = db.get_all_shortages_today(rest["id"])
+        pending  = [i for i in all_hoy if i["status"] == "pending"]
+        bought   = [i for i in all_hoy if i["status"] == "bought"]
+
+        # ── Mensaje para el jefe de cocina ─────────────────────────────────
+        msg_jefe = (
             f"🌙 *Cierre de turno — {_rest_label(rest_name)}*\n\n"
             f"Es hora de completar el checklist de faltantes.\n"
             f"Usa /checklist para ver el estado actual.\n"
@@ -80,9 +87,45 @@ async def job_cierre_turno(ctx: ContextTypes.DEFAULT_TYPE):
         chiefs = config.OASIS_CHIEF_IDS if rest_name == "oasis" else config.DALI_CHIEF_IDS
         for tid in chiefs:
             try:
-                await ctx.bot.send_message(chat_id=tid, text=msg, parse_mode="Markdown")
+                await ctx.bot.send_message(chat_id=tid, text=msg_jefe, parse_mode="Markdown")
             except Exception as e:
                 logger.warning(f"Recordatorio cierre no entregado a {tid}: {e}")
+
+        # ── Planilla para la supervisora ───────────────────────────────────
+        lines = [
+            f"🌙 *Planilla de cierre — {_rest_label(rest_name)}*",
+            f"📅 {today}\n",
+        ]
+        if pending:
+            lines.append(f"🔴 *Pendiente de comprar ({len(pending)}):*")
+            for item in pending:
+                by = item["updated_by"]
+                nota = f"  _por {by}_" if by and by.lower() != "sistema" else ""
+                lines.append(f"  ☐ {item['item_name']} — {item['quantity_needed']}{nota}")
+        if bought:
+            lines.append(f"\n🟢 *Ya comprado hoy ({len(bought)}):*")
+            for item in bought:
+                lines.append(f"  ☑ ~~{item['item_name']}~~")
+        if not pending and not bought:
+            lines.append("✅ Sin faltantes registrados hoy. ¡Stock en orden!")
+        if pending:
+            lines.append(
+                f"\n⚠️ Hay *{len(pending)}* ítem(s) aún sin comprar.\n"
+                f"El jefe de cocina está siendo notificado ahora."
+            )
+        else:
+            lines.append("\n✅ Todo comprado. Esperando confirmación del jefe con /stock\\_ok")
+
+        msg_sup = "\n".join(lines)
+        supervisors = (
+            config.OASIS_SUPERVISOR_IDS if rest_name == "oasis"
+            else config.DALI_SUPERVISOR_IDS
+        )
+        for tid in supervisors | config.ADMIN_IDS:
+            try:
+                await ctx.bot.send_message(chat_id=tid, text=msg_sup, parse_mode="Markdown")
+            except Exception as e:
+                logger.warning(f"Planilla cierre no entregada a {tid}: {e}")
 
 
 async def job_check_cross_transfer(ctx: ContextTypes.DEFAULT_TYPE):

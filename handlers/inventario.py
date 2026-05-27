@@ -237,6 +237,7 @@ async def cmd_stock_ok(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
     if bought:
         resumen = "\n📦 Comprado hoy:\n" + "\n".join(f"  ✅ {i['item_name']}" for i in bought)
 
+    # Confirmación al jefe de cocina
     await update.message.reply_text(
         f"✅ *Stock OK* — {rest_label(rname)}\n"
         f"Confirmado por: {user}\n"
@@ -245,3 +246,29 @@ async def cmd_stock_ok(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
         f"¡Todo listo para mañana! 🎉",
         parse_mode="Markdown"
     )
+
+    # Notificar a la supervisora y al jefe con la planilla final
+    today = db.today()
+    lines_sup = [
+        f"✅ *Stock confirmado — {rest_label(rname)}*",
+        f"📅 {today}",
+        f"👤 Confirmado por: {user}\n",
+    ]
+    if bought:
+        lines_sup.append(f"📦 *Comprado hoy ({len(bought)} ítem(s)):*")
+        for item in bought:
+            lines_sup.append(f"  ✅ {item['item_name']} — {item['quantity_needed']}")
+    else:
+        lines_sup.append("ℹ️ No se registraron faltantes hoy.")
+
+    lines_sup.append("\n🟢 Todo en orden para mañana.")
+    msg_sup = "\n".join(lines_sup)
+
+    supervisors = (
+        config.OASIS_SUPERVISOR_IDS if rname == "oasis" else config.DALI_SUPERVISOR_IDS
+    )
+    for tid in supervisors | config.ADMIN_IDS:
+        try:
+            await ctx.bot.send_message(chat_id=tid, text=msg_sup, parse_mode="Markdown")
+        except Exception:
+            pass
