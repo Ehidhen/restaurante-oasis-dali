@@ -143,6 +143,20 @@ def init_db():
             verification_note   TEXT DEFAULT '',
             registered_at       TEXT DEFAULT (datetime('now','localtime'))
         );
+
+        CREATE TABLE IF NOT EXISTS orders (
+            id              INTEGER PRIMARY KEY AUTOINCREMENT,
+            restaurant_id   INTEGER NOT NULL REFERENCES restaurants(id),
+            mesero_id       TEXT NOT NULL,
+            mesero_name     TEXT NOT NULL,
+            table_ref       TEXT DEFAULT '',
+            items           TEXT NOT NULL,
+            notes           TEXT DEFAULT '',
+            status          TEXT DEFAULT 'pending',
+            created_at      TEXT DEFAULT (datetime('now','localtime')),
+            ready_at        TEXT DEFAULT NULL,
+            served_at       TEXT DEFAULT NULL
+        );
     """)
 
     # Seed restaurantes
@@ -889,3 +903,77 @@ def get_combined_stats(days: int = 30) -> dict:
             "shifts":        get_shift_comparison(dali["id"], days),
         },
     }
+
+
+# ── Comandas (pedidos de meseros) ────────────────────────────────────────────
+
+def create_order(restaurant_id: int, mesero_id: str, mesero_name: str,
+                 table_ref: str, items: str, notes: str = "") -> int:
+    """Crea un nuevo pedido, retorna su ID."""
+    with get_conn() as conn:
+        cur = conn.execute("""
+            INSERT INTO orders (restaurant_id, mesero_id, mesero_name,
+                                table_ref, items, notes, status)
+            VALUES (?, ?, ?, ?, ?, ?, 'pending')
+        """, (restaurant_id, str(mesero_id), mesero_name, table_ref, items, notes))
+        conn.commit()
+        return cur.lastrowid
+
+
+def get_orders_today(restaurant_id: int, status: str | None = None) -> list:
+    """Todos los pedidos de HOY para un restaurante, ordenados por creación ASC."""
+    date = today()
+    with get_conn() as conn:
+        if status:
+            return conn.execute("""
+                SELECT * FROM orders
+                WHERE restaurant_id = ? AND date(created_at) = ? AND status = ?
+                ORDER BY created_at ASC
+            """, (restaurant_id, date, status)).fetchall()
+        return conn.execute("""
+            SELECT * FROM orders
+            WHERE restaurant_id = ? AND date(created_at) = ?
+            ORDER BY created_at ASC
+        """, (restaurant_id, date)).fetchall()
+
+
+def get_orders_by_mesero_today(restaurant_id: int, mesero_id: str) -> list:
+    """Pedidos del mesero de HOY en ese restaurante."""
+    date = today()
+    with get_conn() as conn:
+        return conn.execute("""
+            SELECT * FROM orders
+            WHERE restaurant_id = ? AND mesero_id = ? AND date(created_at) = ?
+            ORDER BY created_at ASC
+        """, (restaurant_id, str(mesero_id), date)).fetchall()
+
+
+def get_order_by_id(order_id: int) -> "sqlite3.Row | None":
+    with get_conn() as conn:
+        return conn.execute(
+            "SELECT * FROM orders WHERE id = ?", (order_id,)
+        ).fetchone()
+
+
+def mark_order_ready(order_id: int) -> bool:
+    """Marca el pedido como listo para servir. Retorna True si existía."""
+    now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    with get_conn() as conn:
+        cur = conn.execute("""
+            UPDATE orders SET status = 'ready', ready_at = ?
+            WHERE id = ? AND status = 'pending'
+        """, (now, order_id))
+        conn.commit()
+        return cur.rowcount > 0
+
+
+def mark_order_served(order_id: int, mesero_id: str) -> bool:
+    """Marca el pedido como entregado al cliente. Solo el mesero que lo creó."""
+    now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    with get_conn() as conn:
+        cur = conn.execute("""
+            UPDATE orders SET status = 'served', served_at = ?
+            WHERE id = ? AND mesero_id = ? AND status IN ('pending', 'ready')
+        """, (now, order_id, str(mesero_id)))
+        conn.commit()
+        return cur.rowcount > 0

@@ -23,6 +23,9 @@ from handlers.refrescos import cmd_sugerir_refresco, cmd_nueva_promo, cmd_ver_pr
 from handlers.social import job_monitor_facebook
 from handlers.pagos import build_pagos_handler, cmd_ver_pagos, cmd_cerrar_caja
 from handlers.mesero import cmd_mi_restaurante, cmd_comprobantes_dia
+from handlers.pedidos import (
+    cmd_pedido, cmd_pedidos, cmd_listo, cmd_mis_pedidos, cmd_entregado
+)
 
 logging.basicConfig(
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
@@ -225,6 +228,13 @@ def main():
     # ── Mesero / restaurante activo ──
     app.add_handler(CommandHandler("mi_restaurante",    cmd_mi_restaurante))
     app.add_handler(CommandHandler("comprobantes_dia",  cmd_comprobantes_dia))
+
+    # ── Comandas ──
+    app.add_handler(CommandHandler("pedido",       cmd_pedido))
+    app.add_handler(CommandHandler("pedidos",      cmd_pedidos))
+    app.add_handler(CommandHandler("listo",        cmd_listo))
+    app.add_handler(CommandHandler("mis_pedidos",  cmd_mis_pedidos))
+    app.add_handler(CommandHandler("entregado",    cmd_entregado))
 
     # ── Jobs programados ──
     job_queue = app.job_queue
