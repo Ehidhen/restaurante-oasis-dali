@@ -238,3 +238,187 @@ async def cmd_comprobantes_dia(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text(
             "⚠️ No se pudieron recuperar las imágenes (puede que los archivos se hayan movido)."
         )
+
+
+# ── helpers ──────────────────────────────────────────────────────────────────
+
+def _sort_key(t: str):
+    """Orden natural: '1','2','10' → 1,2,10 en vez de '1','10','2'."""
+    try:
+        return (0, int(t), "")
+    except ValueError:
+        return (1, 0, t.lower())
+
+
+# ── /mis_mesas ────────────────────────────────────────────────────────────────
+
+@any_role
+async def cmd_mis_mesas(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
+    """
+    /mis_mesas             → ver mesas asignadas hoy con estado de pedidos
+    /mis_mesas 1 2 3 4     → asignar estas mesas para el turno
+    /mis_mesas limpiar     → liberar todas mis mesas
+    """
+    rid         = ctx.user_data["restaurant_id"]
+    rname       = ctx.user_data["restaurant_name"]
+    mesero_id   = str(update.effective_user.id)
+    mesero_name = ctx.user_data.get("username") or update.effective_user.full_name
+    args        = ctx.args or []
+
+    if not rid:
+        await update.message.reply_text(
+            "Primero dile al bot en qué restaurante estás:\n"
+            "`/mi_restaurante oasis` o `/mi_restaurante dali`",
+            parse_mode="Markdown"
+        )
+        return
+
+    # /mis_mesas limpiar
+    if args and args[0].lower() in ("limpiar", "clear", "borrar"):
+        n = db.clear_mesero_tables(rid, mesero_id)
+        await update.message.reply_text(
+            f"✅ {n} mesa(s) liberadas en {rest_label(rname)}." if n
+            else f"ℹ️ No tenías mesas asignadas en {rest_label(rname)} hoy."
+        )
+        return
+
+    # /mis_mesas 1 2 3 → asignar
+    if args:
+        tables = [a.strip() for a in args if a.strip()]
+        taken  = db.assign_tables(rid, mesero_id, mesero_name, tables)
+
+        mesas_str = "\n".join(f"  🪑 Mesa {t}" for t in sorted(tables, key=_sort_key))
+        msg = f"✅ *Mesas asignadas — {rest_label(rname)}*\n\n{mesas_str}"
+
+        if taken:
+            warn = "\n".join(f"  ⚠️ Mesa {t} (era de {n})" for t, n in taken)
+            msg += f"\n\n{warn}"
+
+        msg += f"\n\nUsa `/mesas` para ver el estado completo."
+        await update.message.reply_text(msg, parse_mode="Markdown")
+        return
+
+    # /mis_mesas sin args → mostrar estado
+    mesas = db.get_mesero_tables(rid, mesero_id)
+    if not mesas:
+        await update.message.reply_text(
+            f"🪑 *{rest_label(rname)}*\n\n"
+            f"No tienes mesas asignadas hoy.\n\n"
+            f"Para asignar: `/mis_mesas 1 2 3 4`",
+            parse_mode="Markdown"
+        )
+        return
+
+    orders = db.get_orders_by_mesero_today(rid, mesero_id)
+    by_table: dict = {}
+    for o in orders:
+        if o["table_ref"]:
+            by_table.setdefault(o["table_ref"], []).append(o)
+
+    lines = [f"🪑 *Mis mesas — {rest_label(rname)}*\n"]
+    for mesa in sorted(mesas, key=_sort_key):
+        pedidos = by_table.get(mesa, [])
+        if not pedidos:
+            lines.append(f"  🟢 Mesa {mesa} — libre")
+        else:
+            pending = [o for o in pedidos if o["status"] == "pending"]
+            ready   = [o for o in pedidos if o["status"] == "ready"]
+
+            if ready:
+                ids = " ".join(f"#{o['id']}" for o in ready)
+                lines.append(f"  🔔 Mesa {mesa} — *¡LISTO!* {ids} → `/entregado N`")
+            elif pending:
+                lines.append(f"  ⏳ Mesa {mesa} — {len(pending)} en cocina")
+            else:
+                lines.append(f"  ✅ Mesa {mesa} — todo entregado")
+
+    lines.append(f"\n_Cambiar: `/mis_mesas 1 2 3` · Liberar: `/mis_mesas limpiar`_")
+    await update.message.reply_text("\n".join(lines), parse_mode="Markdown")
+
+
+# ── /mesas ────────────────────────────────────────────────────────────────────
+
+def _build_mesas_view(rid: int, rname: str, solo_mesero_id: str | None = None) -> str:
+    """
+    Vista de mesas para un restaurante.
+    solo_mesero_id=None → supervisora/cocina: todas las mesas agrupadas por mesero.
+    solo_mesero_id=X    → mesero X: solo sus mesas.
+    """
+    assignments = db.get_all_table_assignments(rid)
+    orders      = db.get_orders_today(rid)
+
+    by_table: dict = {}
+    for o in orders:
+        if o["table_ref"]:
+            by_table.setdefault(o["table_ref"], []).append(o)
+
+    if solo_mesero_id:
+        assignments = [a for a in assignments if a["mesero_id"] == solo_mesero_id]
+
+    if not assignments:
+        if solo_mesero_id:
+            return (
+                f"🪑 {rest_label(rname)}\n"
+                f"No tienes mesas asignadas hoy.\n"
+                f"Usa `/mis_mesas 1 2 3` para asignarte mesas."
+            )
+        return f"🪑 {rest_label(rname)}\nSin mesas asignadas hoy."
+
+    # Agrupar asignaciones por mesero
+    by_mesero: dict = {}
+    for a in assignments:
+        mid = a["mesero_id"]
+        if mid not in by_mesero:
+            by_mesero[mid] = {"name": a["mesero_name"], "tables": []}
+        by_mesero[mid]["tables"].append(a["table_number"])
+
+    lines = [f"🪑 *Mesas — {rest_label(rname)}*\n"]
+
+    for mid, info in by_mesero.items():
+        if not solo_mesero_id:
+            lines.append(f"👤 *{info['name']}*")
+
+        for mesa in sorted(info["tables"], key=_sort_key):
+            pedidos = by_table.get(mesa, [])
+            if not pedidos:
+                lines.append(f"  🟢 Mesa {mesa} — libre")
+            else:
+                pending = [o for o in pedidos if o["status"] == "pending"]
+                ready   = [o for o in pedidos if o["status"] == "ready"]
+
+                if ready:
+                    ids = " ".join(f"#{o['id']}" for o in ready)
+                    lines.append(f"  🔔 Mesa {mesa} — *¡LISTO!* {ids}")
+                elif pending:
+                    lines.append(f"  ⏳ Mesa {mesa} — {len(pending)} en cocina")
+                else:
+                    lines.append(f"  ✅ Mesa {mesa} — todo entregado")
+
+        if not solo_mesero_id:
+            lines.append("")
+
+    return "\n".join(lines).rstrip()
+
+
+@require_role("mesero", "cashier", "kitchen_chief", "supervisor", "boss")
+async def cmd_mesas(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
+    """
+    /mesas
+    Mesero → sus mesas con estado de pedidos.
+    Cocina / supervisora / boss → todas las mesas del restaurante agrupadas por mesero.
+    """
+    rid   = ctx.user_data["restaurant_id"]
+    rname = ctx.user_data["restaurant_name"]
+    role  = ctx.user_data["role"]
+
+    # Boss sin restaurante → ambos
+    if role == "boss" and not rid:
+        msgs = []
+        for name in ["oasis", "dali"]:
+            rest = db.get_restaurant(name)
+            msgs.append(_build_mesas_view(rest["id"], name))
+        await update.message.reply_text("\n\n".join(msgs), parse_mode="Markdown")
+        return
+
+    solo = str(update.effective_user.id) if role == "mesero" else None
+    await update.message.reply_text(_build_mesas_view(rid, rname, solo), parse_mode="Markdown")

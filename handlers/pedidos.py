@@ -268,29 +268,52 @@ async def cmd_mis_pedidos(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
         )
         return
 
+    # Agrupar por mesa (orden numérico natural)
+    by_table: dict = {}
+    sin_mesa = []
+    for o in orders:
+        if o["table_ref"]:
+            by_table.setdefault(o["table_ref"], []).append(o)
+        else:
+            sin_mesa.append(o)
+
+    def _sk(t: str):
+        try:
+            return (0, int(t))
+        except ValueError:
+            return (1, t.lower())
+
     lines = [f"📋 *Mis pedidos hoy — {rest_label(rname)}*\n"]
     ready_ids = []
 
-    for o in orders:
+    def _add_order(o):
         icon  = _STATUS_ICON.get(o["status"], "—")
         label = _STATUS_LABEL.get(o["status"], o["status"])
         t     = o["created_at"][11:16]
-        mesa  = f"Mesa {o['table_ref']}" if o["table_ref"] else "Sin mesa"
-
-        lines.append(f"{icon} *#{o['id']}* | {t} | {mesa}")
-        lines.append(f"   {o['items']}")
-        lines.append(f"   _{label}_")
-
+        lines.append(f"  {icon} *#{o['id']}* — {t}")
+        lines.append(f"     {o['items']}")
+        lines.append(f"     _{label}_")
         if o["status"] == "ready":
             ready_ids.append(o["id"])
 
-    if ready_ids:
+    for mesa in sorted(by_table.keys(), key=_sk):
+        lines.append(f"🪑 *Mesa {mesa}*")
+        for o in by_table[mesa]:
+            _add_order(o)
         lines.append("")
+
+    if sin_mesa:
+        lines.append("🪑 *Sin mesa*")
+        for o in sin_mesa:
+            _add_order(o)
+        lines.append("")
+
+    if ready_ids:
         lines.append("🔔 *¡Tienes pedidos listos para recoger!*")
         for oid in ready_ids:
             lines.append(f"  → `/entregado {oid}` cuando lo lleves a la mesa")
 
-    await update.message.reply_text("\n".join(lines), parse_mode="Markdown")
+    await update.message.reply_text("\n".join(lines).rstrip(), parse_mode="Markdown")
 
 
 # ── /entregado — mesero confirma entrega al cliente ──────────────────────────

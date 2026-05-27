@@ -22,7 +22,7 @@ from handlers.reportes import cmd_resumen_hoy, cmd_resumen_semana, cmd_comparar
 from handlers.refrescos import cmd_sugerir_refresco, cmd_nueva_promo, cmd_ver_promos
 from handlers.social import job_monitor_facebook
 from handlers.pagos import build_pagos_handler, cmd_ver_pagos, cmd_cerrar_caja
-from handlers.mesero import cmd_mi_restaurante, cmd_comprobantes_dia
+from handlers.mesero import cmd_mi_restaurante, cmd_comprobantes_dia, cmd_mis_mesas, cmd_mesas
 from handlers.pedidos import (
     cmd_pedido, cmd_pedidos, cmd_listo, cmd_mis_pedidos, cmd_entregado
 )
@@ -228,6 +228,8 @@ def main():
     # ── Mesero / restaurante activo ──
     app.add_handler(CommandHandler("mi_restaurante",    cmd_mi_restaurante))
     app.add_handler(CommandHandler("comprobantes_dia",  cmd_comprobantes_dia))
+    app.add_handler(CommandHandler("mis_mesas",         cmd_mis_mesas))
+    app.add_handler(CommandHandler("mesas",             cmd_mesas))
 
     # ── Comandas ──
     app.add_handler(CommandHandler("pedido",       cmd_pedido))

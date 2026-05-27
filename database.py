@@ -157,6 +157,15 @@ def init_db():
             ready_at        TEXT DEFAULT NULL,
             served_at       TEXT DEFAULT NULL
         );
+
+        CREATE TABLE IF NOT EXISTS table_assignments (
+            restaurant_id INTEGER NOT NULL REFERENCES restaurants(id),
+            mesero_id     TEXT NOT NULL,
+            mesero_name   TEXT NOT NULL,
+            table_number  TEXT NOT NULL,
+            date          TEXT NOT NULL,
+            PRIMARY KEY (restaurant_id, table_number, date)
+        );
     """)
 
     # Seed restaurantes
@@ -977,3 +986,64 @@ def mark_order_served(order_id: int, mesero_id: str) -> bool:
         """, (now, order_id, str(mesero_id)))
         conn.commit()
         return cur.rowcount > 0
+
+
+# ── Mesas (asignación de meseros) ────────────────────────────────────────────
+
+def assign_tables(restaurant_id: int, mesero_id: str, mesero_name: str,
+                  tables: list) -> list:
+    """Asigna mesas al mesero para hoy (INSERT OR REPLACE).
+    Retorna lista de (table_number, mesero_anterior) para las reasignadas."""
+    date_val = today()
+    taken = []
+    with get_conn() as conn:
+        for table in tables:
+            existing = conn.execute("""
+                SELECT mesero_id, mesero_name FROM table_assignments
+                WHERE restaurant_id = ? AND table_number = ? AND date = ?
+            """, (restaurant_id, table, date_val)).fetchone()
+            if existing and existing["mesero_id"] != str(mesero_id):
+                taken.append((table, existing["mesero_name"]))
+            conn.execute("""
+                INSERT OR REPLACE INTO table_assignments
+                    (restaurant_id, mesero_id, mesero_name, table_number, date)
+                VALUES (?, ?, ?, ?, ?)
+            """, (restaurant_id, str(mesero_id), mesero_name, table, date_val))
+        conn.commit()
+    return taken
+
+
+def get_mesero_tables(restaurant_id: int, mesero_id: str) -> list:
+    """Retorna lista de strings con los números de mesa del mesero hoy."""
+    date_val = today()
+    with get_conn() as conn:
+        rows = conn.execute("""
+            SELECT table_number FROM table_assignments
+            WHERE restaurant_id = ? AND mesero_id = ? AND date = ?
+            ORDER BY table_number
+        """, (restaurant_id, str(mesero_id), date_val)).fetchall()
+    return [r["table_number"] for r in rows]
+
+
+def get_all_table_assignments(restaurant_id: int) -> list:
+    """Todas las asignaciones de hoy, ordenadas por nombre del mesero y mesa."""
+    date_val = today()
+    with get_conn() as conn:
+        return conn.execute("""
+            SELECT table_number, mesero_id, mesero_name
+            FROM table_assignments
+            WHERE restaurant_id = ? AND date = ?
+            ORDER BY mesero_name, table_number
+        """, (restaurant_id, date_val)).fetchall()
+
+
+def clear_mesero_tables(restaurant_id: int, mesero_id: str) -> int:
+    """Elimina TODAS las asignaciones del mesero hoy. Retorna cuántas eliminó."""
+    date_val = today()
+    with get_conn() as conn:
+        cur = conn.execute("""
+            DELETE FROM table_assignments
+            WHERE restaurant_id = ? AND mesero_id = ? AND date = ?
+        """, (restaurant_id, str(mesero_id), date_val))
+        conn.commit()
+        return cur.rowcount
