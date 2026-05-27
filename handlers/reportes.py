@@ -31,11 +31,11 @@ def _format_daily(summary: dict, rname: str) -> str:
 
     return (
         f"{rest_label(rname)} — Resumen de hoy\n"
-        f"🍽 Almuerzos: {alm_qty} × ${alm_tot:.2f}\n"
-        f"🍴 Extras: {ext_qty} × ${ext_tot:.2f}\n"
-        f"🥤 Refrescos: {ref_qty} × ${ref_tot:.2f}\n"
+        f"🍽 Almuerzos: {alm_qty} — Bs {alm_tot:.2f}\n"
+        f"🍴 Extras: {ext_qty} — Bs {ext_tot:.2f}\n"
+        f"🥤 Refrescos: {ref_qty} — Bs {ref_tot:.2f}\n"
         f"────────────────\n"
-        f"💰 *Total: ${total:.2f}*"
+        f"💰 *Total: Bs {total:.2f}*"
     )
 
 
@@ -67,12 +67,12 @@ def _format_weekly(rows: list, rname: str) -> str:
     grand_total = 0.0
     grand_qty = 0
     for row in rows:
-        lines.append(f"📅 {row['date']}: {row['qty']} ventas — ${row['total']:.2f}")
+        lines.append(f"📅 {row['date']}: {row['qty']} ventas — Bs {row['total']:.2f}")
         grand_total += row["total"]
         grand_qty += row["qty"]
 
     lines.append(f"────────────────")
-    lines.append(f"📊 Total: {grand_qty} ventas — *${grand_total:.2f}*")
+    lines.append(f"📊 Total: {grand_qty} ventas — *Bs {grand_total:.2f}*")
     return "\n".join(lines)
 
 
@@ -97,14 +97,14 @@ async def cmd_comparar(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
         f"{'─' * 30}\n"
         f"🌴 *Oasis*\n"
         f"  Almuerzos vendidos: {o_alm}\n"
-        f"  Ingresos: ${o_total:.2f}\n"
+        f"  Ingresos: Bs {o_total:.2f}\n"
         f"  Quedan: {o_qty_now}\n\n"
         f"🎨 *Dali*\n"
         f"  Almuerzos vendidos: {d_alm}\n"
-        f"  Ingresos: ${d_total:.2f}\n"
+        f"  Ingresos: Bs {d_total:.2f}\n"
         f"  Quedan: {d_qty_now}\n"
         f"{'─' * 30}\n"
         f"🏆 Líder hoy: {winner}\n"
-        f"💰 Total ambos: ${o_total + d_total:.2f}"
+        f"💰 Total ambos: Bs {o_total + d_total:.2f}"
     )
     await update.message.reply_text(msg, parse_mode="Markdown")

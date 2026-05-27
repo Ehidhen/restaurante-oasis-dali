@@ -1,6 +1,7 @@
 from telegram import Update
 from telegram.ext import ContextTypes
 import database as db
+import config
 from handlers.roles import any_role, require_role, rest_label
 
 
@@ -40,14 +41,33 @@ def _format_shortages(items: list, rname: str) -> str:
 async def cmd_agregar_faltante(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
     """
     Uso: /agregar_faltante <ítem> | <cantidad>
+    También acepta sin separador: /agregar_faltante Tomates
     Ejemplo: /agregar_faltante Tomates | 5 kg
     """
-    rid = ctx.user_data["restaurant_id"]
+    rid   = ctx.user_data["restaurant_id"]
     rname = ctx.user_data["restaurant_name"]
-    args = " ".join(ctx.args) if ctx.args else ""
-    parts = [p.strip() for p in args.split("|")]
+    user  = ctx.user_data.get("username") or update.effective_user.full_name
+    args  = " ".join(ctx.args) if ctx.args else ""
 
-    if len(parts) < 2 or not parts[0]:
+    if not args.strip():
+        await update.message.reply_text(
+            "📋 *Formato:*\n`/agregar_faltante Ítem | Cantidad`\n\n"
+            "Ejemplo: `/agregar_faltante Tomates | 5 kg`\n"
+            "Sin cantidad: `/agregar_faltante Tomates`",
+            parse_mode="Markdown"
+        )
+        return
+
+    if "|" in args:
+        parts = [p.strip() for p in args.split("|", 1)]
+        item_name = parts[0]
+        quantity  = parts[1] if len(parts) > 1 and parts[1] else "ver"
+    else:
+        # No pipe: entire text is item name, quantity unspecified
+        item_name = args.strip()
+        quantity  = "ver"
+
+    if not item_name:
         await update.message.reply_text(
             "📋 *Formato:*\n`/agregar_faltante Ítem | Cantidad`\n\n"
             "Ejemplo: `/agregar_faltante Tomates | 5 kg`",
@@ -55,15 +75,30 @@ async def cmd_agregar_faltante(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
         )
         return
 
-    item_name = parts[0]
-    quantity = parts[1] if len(parts) > 1 else "1"
-
-    db.add_shortage(rid, item_name, quantity)
+    db.add_shortage(rid, item_name, quantity, user)
     await update.message.reply_text(
         f"✅ Agregado a faltantes de {rest_label(rname)}:\n"
         f"🛒 *{item_name}* — {quantity}",
         parse_mode="Markdown"
     )
+
+    # Notificar a supervisores (no si el que agregó ya es supervisor o boss)
+    role = ctx.user_data.get("role", "")
+    if role == "kitchen_chief":
+        notify_ids = (
+            config.OASIS_SUPERVISOR_IDS if rname == "oasis" else config.DALI_SUPERVISOR_IDS
+        )
+        notify_msg = (
+            f"📋 *Nuevo faltante registrado — {rest_label(rname)}*\n\n"
+            f"🛒 *{item_name}* — {quantity}\n"
+            f"👤 Registrado por: {user}\n\n"
+            f"Ver lista: /faltantes"
+        )
+        for tid in notify_ids:
+            try:
+                await ctx.bot.send_message(chat_id=tid, text=notify_msg, parse_mode="Markdown")
+            except Exception:
+                pass
 
 
 @require_role("kitchen_chief", "supervisor", "boss")

@@ -31,6 +31,19 @@ async def cmd_transferir(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text("❌ Indica un número entero positivo.")
         return
 
+    # Check for an already-active transfer between both restaurants
+    existing = db.get_pending_transfer(rid)
+    if existing and existing["status"] in ("requested", "sent"):
+        status_emoji = "📦" if existing["status"] == "sent" else "⏳"
+        await update.message.reply_text(
+            f"⚠️ Ya hay una transferencia activa (#{existing['id']}).\n"
+            f"{status_emoji} Estado: *{existing['status']}*\n\n"
+            f"Espera a que se complete antes de solicitar otra.\n"
+            f"Usa `/confirmar_envio` o `/confirmar_llegada` para avanzarla.",
+            parse_mode="Markdown"
+        )
+        return
+
     other_rid = db.other_restaurant_id(rid)
     other_rest = db.get_restaurant_by_id(other_rid)
     other_qty = db.get_current_qty(other_rid)

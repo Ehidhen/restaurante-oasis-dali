@@ -86,7 +86,7 @@ async def cmd_mi_restaurante(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
 
 # ── /comprobantes_dia ────────────────────────────────────────────────────────
 
-@require_role("cashier", "supervisor", "boss")
+@require_role("cashier", "supervisor", "boss", "mesero")
 async def cmd_comprobantes_dia(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
     """
     /comprobantes_dia YYYY-MM-DD [oasis|dali]

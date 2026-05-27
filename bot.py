@@ -1,6 +1,6 @@
 import logging
 import os
-from datetime import time, timezone, timedelta
+from datetime import time, timezone, timedelta, datetime as _dt
 
 from telegram import Update
 from telegram.ext import (
@@ -37,20 +37,22 @@ LOCAL_TZ = timezone(timedelta(hours=-5))
 # ── Jobs automáticos ────────────────────────────────────────────────────────
 
 async def job_reporte_matutino(ctx: ContextTypes.DEFAULT_TYPE):
-    """8:00 AM — Enviar lista de faltantes a supervisora y jefe de cocina."""
+    """8:00 AM — Enviar lista de faltantes pendientes de ayer a supervisora y jefe de cocina."""
+    yesterday = (_dt.now(LOCAL_TZ) - timedelta(days=1)).strftime("%Y-%m-%d")
     for rest_name in ["oasis", "dali"]:
         rest = db.get_restaurant(rest_name)
-        items = db.get_shortages(rest["id"], "pending")
+        items = db.get_shortages_by_date(rest["id"], yesterday, status="pending")
         if not items:
             msg = (
                 f"☀️ *Buenos días — {_rest_label(rest_name)}*\n\n"
-                f"✅ No hay faltantes pendientes para hoy. ¡Todo listo!"
+                f"✅ Sin faltantes pendientes de ayer. ¡Stock OK!"
             )
         else:
             lines = [f"☀️ *Reporte matutino — {_rest_label(rest_name)}*\n",
-                     f"📋 Faltantes pendientes de comprar:\n"]
+                     f"📋 *Faltantes sin comprar de ayer ({yesterday}):*\n"]
             for i, item in enumerate(items, 1):
                 lines.append(f"{i}. 🛒 {item['item_name']} — {item['quantity_needed']}")
+            lines.append(f"\nUsa /faltantes para ver el estado actual.")
             msg = "\n".join(lines)
 
         recipients = (

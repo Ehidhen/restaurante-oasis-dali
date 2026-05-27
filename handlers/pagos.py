@@ -28,12 +28,13 @@ def _ensure_dir():
 
 
 def get_current_shift() -> str:
+    """00:00–15:59 → mañana (almuerzo o pre-turno), 16:00–23:59 → noche."""
     hour = datetime.now().hour
-    return SHIFT_MANANA if 11 <= hour < 16 else SHIFT_NOCHE
+    return SHIFT_MANANA if hour < 16 else SHIFT_NOCHE
 
 
 def shift_label(shift: str) -> str:
-    return "Turno Mañana (11:00–16:00)" if shift == SHIFT_MANANA else "Turno Noche (16:00–23:00)"
+    return "Turno Mañana (hasta 16:00)" if shift == SHIFT_MANANA else "Turno Noche (16:00–23:59)"
 
 
 # ── Registro de comprobante ──────────────────────────────────────────────────
@@ -184,20 +185,24 @@ async def cmd_ver_pagos(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
     rid   = ctx.user_data["restaurant_id"]
     rname = ctx.user_data["restaurant_name"]
 
-    pagos = db.get_payments(rid, limit=15)
+    today = db.today()
+    pagos = db.get_payments_by_date(rid, today)
     if not pagos:
-        await update.message.reply_text(f"{rest_label(rname)}\n❌ Sin comprobantes hoy.")
+        await update.message.reply_text(
+            f"{rest_label(rname)}\n📅 {today}\n❌ Sin comprobantes hoy."
+        )
         return
 
     icons = {"verified": "✅", "wrong_account": "⚠️", "unreadable": "❓", "pending": "⏳"}
-    lines = [f"{rest_label(rname)} — Últimos comprobantes\n"]
+    lines = [f"{rest_label(rname)} — Comprobantes de hoy ({today})\n"]
     total = 0.0
     for p in pagos:
         t = p["registered_at"][11:16] if p["registered_at"] else "—"
         icon = icons.get(p["verification_status"], "⏳")
+        turno = "☀️" if (p["shift"] or "") == "manana" else "🌙"
         amt = f"Bs {p['amount']:.2f}"
         total += p["amount"] or 0
-        lines.append(f"{icon} #{p['id']} {t} — *{amt}* {p['cashier_name']}")
+        lines.append(f"{turno}{icon} #{p['id']} {t} — *{amt}* {p['cashier_name']}")
 
     lines.append(f"\n💰 Total: *Bs {total:.2f}*")
     await update.message.reply_text("\n".join(lines), parse_mode="Markdown")
@@ -208,11 +213,21 @@ async def cmd_ver_pagos(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
 @require_role("cashier", "supervisor", "boss")
 async def cmd_cerrar_caja(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
     """
-    /cerrar_caja — Resumen del turno actual con estado de cada comprobante.
+    /cerrar_caja          — Resumen del turno actual.
+    /cerrar_caja manana   — Ver turno mañana (aunque ya sea noche).
+    /cerrar_caja noche    — Ver turno noche.
     """
     rid   = ctx.user_data["restaurant_id"]
     rname = ctx.user_data["restaurant_name"]
-    shift = get_current_shift()
+
+    # Shift from argument or auto-detect
+    arg = (ctx.args[0].lower().strip() if ctx.args else "").replace("ñ", "n")
+    if arg in ("manana", "mañana"):
+        shift = SHIFT_MANANA
+    elif arg == "noche":
+        shift = SHIFT_NOCHE
+    else:
+        shift = get_current_shift()
 
     pagos = db.get_payments_by_shift(rid, shift)
 

@@ -411,12 +411,15 @@ def get_shortages(restaurant_id: int, status: str = "pending") -> list:
 
 def mark_shortage_bought(restaurant_id: int, item_name: str,
                          updated_by: str = "Sistema") -> bool:
-    now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    """Marca como comprado SOLO en los faltantes de HOY."""
+    now  = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    date = today()
     with get_conn() as conn:
         cur = conn.execute("""
             UPDATE shortage_list SET status = 'bought', updated_by = ?, updated_at = ?
             WHERE restaurant_id = ? AND item_name LIKE ? AND status = 'pending'
-        """, (updated_by, now, restaurant_id, f"%{item_name}%"))
+              AND date = ?
+        """, (updated_by, now, restaurant_id, f"%{item_name}%", date))
         conn.commit()
         return cur.rowcount > 0
 
@@ -424,6 +427,24 @@ def mark_shortage_bought(restaurant_id: int, item_name: str,
 def get_all_shortages_today(restaurant_id: int) -> list:
     date = today()
     with get_conn() as conn:
+        return conn.execute("""
+            SELECT * FROM shortage_list
+            WHERE restaurant_id = ? AND date = ?
+            ORDER BY status, id
+        """, (restaurant_id, date)).fetchall()
+
+
+def get_shortages_by_date(restaurant_id: int, date: str,
+                           status: str | None = None) -> list:
+    """Returns shortage_list entries for a given date (YYYY-MM-DD).
+    Optionally filter by status ('pending' or 'bought')."""
+    with get_conn() as conn:
+        if status:
+            return conn.execute("""
+                SELECT * FROM shortage_list
+                WHERE restaurant_id = ? AND date = ? AND status = ?
+                ORDER BY id
+            """, (restaurant_id, date, status)).fetchall()
         return conn.execute("""
             SELECT * FROM shortage_list
             WHERE restaurant_id = ? AND date = ?
