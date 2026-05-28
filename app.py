@@ -8,6 +8,7 @@ from handlers.social import get_latest_posts_summary
 from handlers.analytics import get_ai_analysis
 
 COMPROBANTES_DIR = os.getenv("COMPROBANTES_DIR", "comprobantes")
+APK_DIR         = os.getenv("APK_DIR", "apk")
 
 app = Flask(__name__)
 
@@ -152,6 +153,92 @@ def api_stats_ai():
 @app.route("/health")
 def health():
     return "OK", 200
+
+
+# ── APK distribution ─────────────────────────────────────────────────────────
+
+@app.route("/instalar")
+def instalar():
+    """Página de instalación — el teléfono Android apunta aquí."""
+    apk_path = os.path.join(os.path.abspath(APK_DIR), "oasis-dali.apk")
+    apk_ok   = os.path.isfile(apk_path)
+    apk_size = ""
+    if apk_ok:
+        mb = os.path.getsize(apk_path) / (1024 * 1024)
+        apk_size = f"{mb:.1f} MB"
+
+    server_url = request.host_url.rstrip("/")
+    apk_url    = f"{server_url}/apk/download"
+    qr_url     = f"https://api.qrserver.com/v1/create-qr-code/?size=220x220&data={apk_url}"
+
+    html = f"""<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Instalar Oasis &amp; Dali</title>
+<style>
+  * {{ box-sizing: border-box; margin: 0; padding: 0 }}
+  body {{ font-family: -apple-system, sans-serif; background: #1e293b;
+         color: #f1f5f9; min-height: 100vh; display: flex;
+         flex-direction: column; align-items: center; justify-content: center;
+         padding: 24px; }}
+  .card {{ background: #fff; color: #1e293b; border-radius: 20px;
+           padding: 32px 24px; max-width: 380px; width: 100%;
+           text-align: center; box-shadow: 0 20px 60px rgba(0,0,0,.4); }}
+  h1 {{ font-size: 26px; font-weight: 800; margin-bottom: 4px }}
+  .sub {{ color: #64748b; font-size: 14px; margin-bottom: 24px }}
+  img {{ border-radius: 12px; margin-bottom: 20px }}
+  .btn {{ display: block; background: #16a34a; color: #fff;
+          padding: 16px; border-radius: 12px; font-size: 18px;
+          font-weight: 800; text-decoration: none; margin-bottom: 16px }}
+  .btn:hover {{ background: #15803d }}
+  .unavail {{ background: #dc2626 }}
+  .steps {{ background: #f8fafc; border-radius: 12px; padding: 16px;
+            text-align: left; font-size: 13px; color: #475569 }}
+  .steps li {{ margin: 8px 0 8px 16px }}
+  .size {{ font-size: 12px; color: #94a3b8; margin-top: 8px }}
+</style>
+</head>
+<body>
+<div class="card">
+  <h1>🌴🎨 Oasis &amp; Dali</h1>
+  <p class="sub">App del restaurante — Android</p>
+
+  {'<img src="' + qr_url + '" width="220" height="220" alt="QR">' if apk_ok else ''}
+
+  {'<a class="btn" href="/apk/download">⬇ Descargar APK</a>' if apk_ok
+   else '<div class="btn unavail">⏳ APK aún no disponible</div>'}
+
+  {'<p class="size">' + apk_size + '</p>' if apk_size else ''}
+
+  <div class="steps">
+    <strong>Cómo instalar:</strong>
+    <ol>
+      <li>Descarga el APK</li>
+      <li>En ajustes → Seguridad → activa <em>"Fuentes desconocidas"</em></li>
+      <li>Abre el archivo descargado e instala</li>
+      <li>Elige tu nombre, rol y restaurante</li>
+    </ol>
+  </div>
+</div>
+</body>
+</html>"""
+    return html, 200, {"Content-Type": "text/html; charset=utf-8"}
+
+
+@app.route("/apk/download")
+def apk_download():
+    """Descarga directa del APK."""
+    apk_abs = os.path.abspath(APK_DIR)
+    apk_file = os.path.join(apk_abs, "oasis-dali.apk")
+    if not os.path.isfile(apk_file):
+        return "APK no disponible todavía.", 404
+    return send_from_directory(
+        apk_abs, "oasis-dali.apk",
+        as_attachment=True,
+        mimetype="application/vnd.android.package-archive",
+    )
 
 
 # ── Mobile App API (/api/app/*) ──────────────────────────────────────────────
