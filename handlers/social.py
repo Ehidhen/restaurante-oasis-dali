@@ -217,11 +217,12 @@ async def job_monitor_facebook(ctx: ContextTypes.DEFAULT_TYPE):
             f"`/nueva_promo Nombre | {p['price'] or 'Precio'} | Descripción`"
         )
 
-        # Auto-registrar si parece promo
+        # Auto-registrar si parece promo — en ambos restaurantes
         if p["is_promo"] and p["price"]:
             content_short = p["content"][:60].strip()
-            db.add_promo(oasis["id"], content_short, p["price"],
-                         source="facebook", image_url=p["image_url"])
+            for rest_obj in [oasis, db.get_restaurant("dali")]:
+                db.add_promo(rest_obj["id"], content_short, p["price"],
+                             source="facebook", image_url=p["image_url"])
             msg += f"\n\n✅ _Registrada automáticamente como promo_"
 
         # Auto-actualizar menú si detectamos sopa + segundo

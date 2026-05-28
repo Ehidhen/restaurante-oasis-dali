@@ -198,6 +198,13 @@ async def cmd_listo(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text(f"❌ No existe el pedido #{order_id}.")
         return
 
+    # Verificar que el pedido pertenece al restaurante del usuario
+    if rid and order["restaurant_id"] != rid:
+        await update.message.reply_text(
+            f"❌ El pedido #{order_id} no pertenece a {rest_label(rname)}."
+        )
+        return
+
     if order["status"] != "pending":
         icon = _STATUS_ICON.get(order["status"], "—")
         label = _STATUS_LABEL.get(order["status"], order["status"])

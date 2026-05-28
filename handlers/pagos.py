@@ -57,10 +57,21 @@ async def cmd_registrar_pago(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
     if len(parts) > 1:
         description = parts[1]
 
+    rid    = ctx.user_data["restaurant_id"]
+    rname  = ctx.user_data["restaurant_name"]
+
+    if not rid:
+        await update.message.reply_text(
+            "👑 Especifica el restaurante:\n"
+            "`/registrar_pago oasis 35 QR mesa 5`\n"
+            "`/registrar_pago dali 40 efectivo`",
+            parse_mode="Markdown"
+        )
+        return ConversationHandler.END
+
     ctx.user_data["pago_amount"]      = amount
     ctx.user_data["pago_description"] = description
 
-    rname  = ctx.user_data["restaurant_name"]
     shift  = get_current_shift()
     amt_s  = f"Bs {amount:.2f}" if amount else "(sin monto)"
 
