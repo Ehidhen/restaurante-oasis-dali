@@ -175,7 +175,7 @@ async def cmd_comprobantes_dia(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
 
     if manana:
         mt = sum(p["amount"] or 0 for p in manana)
-        lines.append("☀️ *Turno Mañana (11:00–16:00):*")
+        lines.append("☀️ *Turno Mañana (hasta 16:00):*")
         for p in manana:
             icon = icons.get(p["verification_status"], "⏳")
             t = (p["registered_at"] or "")[11:16]

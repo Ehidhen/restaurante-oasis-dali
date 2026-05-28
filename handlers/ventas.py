@@ -55,6 +55,14 @@ async def cmd_quedan(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
         return
 
     rid = ctx.user_data["restaurant_id"]
+    if not rid:
+        await update.message.reply_text(
+            "Primero dile al bot en qué restaurante estás:\n"
+            "`/mi_restaurante oasis` o `/mi_restaurante dali`",
+            parse_mode="Markdown"
+        )
+        return
+
     qty = db.get_current_qty(rid)
     bar = _qty_bar(qty)
     estado = "❌ AGOTADO" if qty == 0 else ("⚠️ Pocas unidades" if qty <= LOW_THRESHOLD else "✅ OK")

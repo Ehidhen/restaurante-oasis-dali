@@ -313,6 +313,116 @@ def _build_cierre(rid: int, rname: str, shift: str) -> str:
     return "\n".join(lines)
 
 
+# ── Cuadre del día ───────────────────────────────────────────────────────────
+
+@require_role("cashier", "supervisor", "boss")
+async def cmd_cuadre(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
+    """
+    /cuadre — Vista completa para el cuadre de caja:
+    Comandas de meseros + Ventas registradas + Pagos QR = cierre del día sin papel.
+    """
+    rid   = ctx.user_data["restaurant_id"]
+    rname = ctx.user_data["restaurant_name"]
+    role  = ctx.user_data["role"]
+
+    if role == "boss" and not rid:
+        msgs = []
+        for name in ["oasis", "dali"]:
+            rest = db.get_restaurant(name)
+            msgs.append(_build_cuadre(rest["id"], name))
+        await update.message.reply_text("\n\n".join(msgs), parse_mode="Markdown")
+        return
+
+    await update.message.reply_text(_build_cuadre(rid, rname), parse_mode="Markdown")
+
+
+def _build_cuadre(rid: int, rname: str) -> str:
+    today = db.today()
+
+    # ── 1. Comandas de meseros ────────────────────────────────────────────────
+    orders   = db.get_orders_today(rid)
+    servidos = [o for o in orders if o["status"] == "served"]
+    listos   = [o for o in orders if o["status"] == "ready"]
+    cocina   = [o for o in orders if o["status"] == "pending"]
+
+    # Contar almuerzos de las comandas servidas (extraer números del campo items)
+    import re as _re
+    alm_en_comandas = 0
+    for o in servidos:
+        nums = _re.findall(r"(\d+)\s*almuerzo", o["items"], flags=_re.IGNORECASE)
+        alm_en_comandas += sum(int(n) for n in nums) if nums else 1
+
+    # ── 2. Ventas registradas por caja ────────────────────────────────────────
+    summary  = db.get_daily_summary(rid)
+    alm_qty, alm_tot = summary.get("almuerzo", (0, 0.0))
+    ext_qty, ext_tot = summary.get("extra",    (0, 0.0))
+    ref_qty, ref_tot = summary.get("refresco", (0, 0.0))
+    total_ventas     = summary.get("total", 0.0)
+
+    # ── 3. Pagos QR recibidos ─────────────────────────────────────────────────
+    pagos          = db.get_payments_by_date(rid, today)
+    total_pagos    = sum(p["amount"] or 0 for p in pagos)
+    pagos_ok       = [p for p in pagos if p["verification_status"] == "verified"]
+    pagos_wrong    = [p for p in pagos if p["verification_status"] == "wrong_account"]
+    pagos_pend     = [p for p in pagos if p["verification_status"] in ("pending", "unreadable")]
+    total_ok       = sum(p["amount"] or 0 for p in pagos_ok)
+
+    # ── Diferencia ────────────────────────────────────────────────────────────
+    diferencia = total_ventas - total_pagos  # positivo = posible efectivo
+
+    lines = [
+        f"🧾 *Cuadre del día — {rest_label(rname)}*",
+        f"📅 {today}\n",
+
+        f"📋 *Comandas (meseros):*",
+        f"  ✅ Servidas hoy: *{len(servidos)}*",
+    ]
+    if alm_en_comandas:
+        lines.append(f"  🍽 Almuerzos en comandas: *{alm_en_comandas}*")
+    if listos:
+        lines.append(f"  🔔 Listas sin recoger: {len(listos)}")
+    if cocina:
+        lines.append(f"  ⏳ En cocina aún: {len(cocina)}")
+    lines.append(f"  📊 Total comandas hoy: {len(orders)}\n")
+
+    lines += [
+        f"💵 *Ventas registradas (caja):*",
+        f"  🍽 {alm_qty} almuerzos — Bs {alm_tot:.2f}",
+    ]
+    if ext_qty:
+        lines.append(f"  🍴 {ext_qty} extras — Bs {ext_tot:.2f}")
+    if ref_qty:
+        lines.append(f"  🥤 {ref_qty} refrescos — Bs {ref_tot:.2f}")
+    lines.append(f"  💰 Total ventas: *Bs {total_ventas:.2f}*\n")
+
+    lines += [
+        f"💳 *Pagos QR recibidos ({len(pagos)}):*",
+        f"  ✅ Verificados: {len(pagos_ok)} — Bs {total_ok:.2f}",
+    ]
+    if pagos_wrong:
+        lines.append(f"  ⚠️ Cuenta incorrecta: {len(pagos_wrong)} — Bs {sum(p['amount'] or 0 for p in pagos_wrong):.2f}")
+    if pagos_pend:
+        lines.append(f"  ❓ Por verificar: {len(pagos_pend)}")
+    lines.append(f"  💳 Total pagos: *Bs {total_pagos:.2f}*\n")
+
+    # ── Línea de cuadre ───────────────────────────────────────────────────────
+    lines.append(f"{'─' * 30}")
+    lines.append(f"💰 Ventas:   *Bs {total_ventas:.2f}*")
+    lines.append(f"💳 QR cob.:  *Bs {total_pagos:.2f}*")
+
+    if abs(diferencia) < 0.01:
+        lines.append(f"✅ *Cuadre perfecto — todo encuadra*")
+    elif diferencia > 0:
+        lines.append(f"💵 *Bs {diferencia:.2f} en efectivo (probable)*")
+    else:
+        lines.append(f"🚨 *Diferencia Bs {abs(diferencia):.2f} — revisar pagos*")
+
+    if pagos_wrong:
+        lines.append(f"\n⚠️ _Hay comprobantes con cuenta incorrecta — revisar antes de cerrar._")
+
+    return "\n".join(lines)
+
+
 # ── Cancelar ─────────────────────────────────────────────────────────────────
 
 async def cancel_pago(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
